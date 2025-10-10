@@ -1,70 +1,108 @@
-# Getting Started with Create React App
+# Pomodoro Timer with YouTube Integration
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A productivity application that combines the Pomodoro technique with YouTube video playback for focused work sessions.
 
-## Available Scripts
+## Features
 
-In the project directory, you can run:
+- **Pomodoro Timer**:
+  - Configurable work and break durations
+  - Long break after a set number of work sessions
+  - Visual cycle progress indicator
+  - Notifications at the end of each timer period
 
-### `npm start`
+- **YouTube Integration**:
+  - Embedded YouTube video player
+  - Search functionality for videos
+  - Video pauses during break periods
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- **User Interface**:
+  - Dark/light mode toggle
+  - Responsive design
+  - Clean, intuitive layout
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+- **Offline Functionality**:
+  - Works offline after initial load
+  - Service worker implementation
 
-### `npm test`
+## How It Works
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+1. **Work Session**:
+   - Set your work duration (default 25 minutes)
+   - Start the timer and focus on your task
+   - Video continues playing during work sessions
 
-### `npm run build`
+2. **Break**:
+   - After work session ends, timer switches to break mode
+   - Video pauses automatically
+   - Take a short break (default 5 minutes)
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+3. **Long Break**:
+   - After completing a set number of work sessions (default 4)
+   - Take a longer break (default 15 minutes)
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+4. **Cycle Completion**:
+   - Each completed work session increments the cycle counter
+   - Visual indicators show progress through the cycle
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## Installation
 
-### `npm run eject`
+1. Clone the repository:
+   ```
+   git clone https://github.com/yourusername/pomodoro-timer.git
+   ```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+2. Install dependencies:
+   ```
+   npm install
+   ```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+3. Start the development server:
+   ```
+   npm start
+   ```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## Deployment with Nginx
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+To deploy the application with Nginx:
 
-## Learn More
+1. Build the production version:
+   ```
+   npm run build
+   ```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+2. Copy the contents of the `build` folder to your web server.
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+3. Configure Nginx with the following basic configuration:
 
-### Code Splitting
+```
+server {
+    listen 80;
+    server_name yourdomain.com;
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+    root /path/to/your/build/folder;
+    index index.html;
 
-### Analyzing the Bundle Size
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+    location /api {
+        proxy_pass http://localhost:3001;
+    }
+}
+```
 
-### Making a Progressive Web App
+Remember to:
+- Replace `yourdomain.com` with your actual domain name
+- Replace `/path/to/your/build/folder` with the actual path to your build folder
+- Adjust the port number in the proxy_pass directive if your backend API runs on a different port
+- Configure SSL if you want to use HTTPS
+- Set up proper permissions for the web server to access the files
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+## Contributing
 
-### Advanced Configuration
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+## License
 
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+This project is open source and available under the [MIT License](LICENSE).
