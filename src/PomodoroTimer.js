@@ -3,15 +3,36 @@ import { Button, Typography, Box, TextField, Accordion, AccordionSummary, Accord
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import CircleIcon from '@mui/icons-material/Circle';
 
-const PomodoroTimer = () => {
-  const [minutes, setMinutes] = useState(25);
+const PomodoroTimer = ({ onWorkTimeChange }) => {
+  // Load settings from localStorage on mount
+  const loadSettings = () => {
+    const saved = localStorage.getItem('pomodoroSettings');
+    if (saved) {
+      const settings = JSON.parse(saved);
+      return {
+        workDuration: settings.workDuration || 25,
+        breakDuration: settings.breakDuration || 5,
+        longBreakDuration: settings.longBreakDuration || 15,
+        cyclesBeforeLongBreak: settings.cyclesBeforeLongBreak || 4
+      };
+    }
+    return {
+      workDuration: 25,
+      breakDuration: 5,
+      longBreakDuration: 15,
+      cyclesBeforeLongBreak: 4
+    };
+  };
+
+  const initialSettings = loadSettings();
+  const [minutes, setMinutes] = useState(initialSettings.workDuration);
   const [seconds, setSeconds] = useState(0);
   const [isActive, setIsActive] = useState(false);
   const [isWorkTime, setIsWorkTime] = useState(true);
-  const [workDuration, setWorkDuration] = useState(25);
-  const [breakDuration, setBreakDuration] = useState(5);
-  const [longBreakDuration, setLongBreakDuration] = useState(15);
-  const [cyclesBeforeLongBreak, setCyclesBeforeLongBreak] = useState(4);
+  const [workDuration, setWorkDuration] = useState(initialSettings.workDuration);
+  const [breakDuration, setBreakDuration] = useState(initialSettings.breakDuration);
+  const [longBreakDuration, setLongBreakDuration] = useState(initialSettings.longBreakDuration);
+  const [cyclesBeforeLongBreak, setCyclesBeforeLongBreak] = useState(initialSettings.cyclesBeforeLongBreak);
   const [cycleCount, setCycleCount] = useState(0);
   const [expanded, setExpanded] = useState(false);
 
@@ -44,6 +65,11 @@ const PomodoroTimer = () => {
             setMinutes(nextDuration);
             setIsWorkTime(!isWorkTime);
             setSeconds(0);
+            
+            // Notify parent component of work time change
+            if (onWorkTimeChange) {
+              onWorkTimeChange(!isWorkTime);
+            }
 
             // Request notification permission
             if (Notification.permission !== 'granted') {
@@ -71,7 +97,7 @@ const PomodoroTimer = () => {
       clearInterval(interval);
     }
     return () => clearInterval(interval);
-  }, [isActive, seconds, minutes, isWorkTime, workDuration, breakDuration, longBreakDuration, cycleCount, cyclesBeforeLongBreak]);
+  }, [isActive, seconds, minutes, isWorkTime, workDuration, breakDuration, longBreakDuration, cycleCount, cyclesBeforeLongBreak, onWorkTimeChange]);
 
   const toggleTimer = () => {
     setIsActive(!isActive);
@@ -109,6 +135,11 @@ const PomodoroTimer = () => {
     setMinutes(nextDuration);
     setIsWorkTime(!isWorkTime);
     setSeconds(0);
+    
+    // Notify parent component of work time change
+    if (onWorkTimeChange) {
+      onWorkTimeChange(!isWorkTime);
+    }
 
     // Request notification permission
     if (Notification.permission !== 'granted') {
@@ -131,6 +162,15 @@ const PomodoroTimer = () => {
       setMinutes(isWorkTime ? workDuration : breakDuration);
       setSeconds(0);
       setExpanded(false); // Collapse the panel after applying settings
+      
+      // Save settings to localStorage
+      const settings = {
+        workDuration,
+        breakDuration,
+        longBreakDuration,
+        cyclesBeforeLongBreak
+      };
+      localStorage.setItem('pomodoroSettings', JSON.stringify(settings));
     }
   };
 
