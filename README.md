@@ -48,7 +48,7 @@ A productivity application that combines the Pomodoro technique with YouTube vid
 
 1. Clone the repository:
    ```
-   git clone https://github.com/yourusername/pomodoro-timer.git
+   git clone https://github.com/Nardo86/pomodoro-youtube-timer.git
    ```
 
 2. Install dependencies:
