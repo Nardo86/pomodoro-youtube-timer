@@ -23,14 +23,18 @@ import SkipNextIcon from '@mui/icons-material/SkipNext';
 const AnalogClock = ({ remainingSeconds, totalSeconds }) => {
   const theme = useTheme();
   const safeTotal = totalSeconds > 0 ? totalSeconds : 1;
-  const remainingRatio = Math.max(0, Math.min(remainingSeconds / safeTotal, 1));
+  const clampedRemaining = Math.max(0, Math.min(remainingSeconds, safeTotal));
+  const remainingRatio = clampedRemaining / safeTotal;
   const elapsedAngle = (1 - remainingRatio) * 360;
   const minuteRotation = elapsedAngle;
-  const currentSecond = remainingSeconds % 60;
-  const secondRotation = (currentSecond / 60) * 360;
+  const elapsedSeconds = safeTotal - clampedRemaining;
+  const secondRotation = elapsedSeconds * 6;
+  const isPhaseReset = clampedRemaining === safeTotal;
   const trackColor = theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)';
   const minuteColor = theme.palette.primary.main;
   const secondColor = theme.palette.secondary.main;
+  const minuteHandTransition = isPhaseReset ? 'none' : 'transform 0.3s ease';
+  const secondHandTransition = isPhaseReset ? 'none' : 'transform 0.1s linear';
 
   return (
     <Box
@@ -48,7 +52,6 @@ const AnalogClock = ({ remainingSeconds, totalSeconds }) => {
           position: 'absolute',
           inset: 0,
           borderRadius: '50%',
-          border: `6px solid ${trackColor}`,
           background: `conic-gradient(from 0deg, ${minuteColor} 0deg ${elapsedAngle}deg, ${trackColor} ${elapsedAngle}deg 360deg)`,
           transition: 'background 0.3s ease'
         }}
@@ -75,7 +78,7 @@ const AnalogClock = ({ remainingSeconds, totalSeconds }) => {
           backgroundColor: minuteColor,
           transformOrigin: 'center bottom',
           transform: `translate(-50%, -100%) rotate(${minuteRotation}deg)`,
-          transition: 'transform 0.3s ease',
+          transition: minuteHandTransition,
           zIndex: 2
         }}
       />
@@ -90,7 +93,7 @@ const AnalogClock = ({ remainingSeconds, totalSeconds }) => {
           backgroundColor: secondColor,
           transformOrigin: 'center bottom',
           transform: `translate(-50%, -100%) rotate(${secondRotation}deg)`,
-          transition: 'transform 0.1s linear',
+          transition: secondHandTransition,
           zIndex: 3
         }}
       />
@@ -148,6 +151,7 @@ const PomodoroTimer = ({ onWorkTimeChange, onTimerActiveChange, themeToggle }) =
   const [currentPhaseType, setCurrentPhaseType] = useState('work');
   const [currentPhaseDuration, setCurrentPhaseDuration] = useState(initialSettings.workDuration);
 
+  const normalizedCycleTarget = Math.max(1, cyclesBeforeLongBreak || 1);
   const dividerColor = theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)';
   const totalPhaseSeconds = currentPhaseDuration * 60;
   const remainingSeconds = minutes * 60 + seconds;
@@ -184,22 +188,27 @@ const PomodoroTimer = ({ onWorkTimeChange, onTimerActiveChange, themeToggle }) =
             let notificationMessage;
             let nextIsWorkTime;
             let nextPhaseTypeValue;
+            let nextCycleCount = cycleCount;
 
             if (isWorkTime) {
               const completedCycles = cycleCount + 1;
-              const reachedLongBreak = completedCycles >= cyclesBeforeLongBreak;
+              const reachedLongBreak = completedCycles >= normalizedCycleTarget;
               nextDuration = reachedLongBreak ? longBreakDuration : breakDuration;
               notificationMessage = 'Time for a break!';
               nextIsWorkTime = false;
               nextPhaseTypeValue = reachedLongBreak ? 'longBreak' : 'break';
-              setCycleCount(completedCycles);
+              nextCycleCount = completedCycles;
             } else {
               nextDuration = workDuration;
               notificationMessage = 'Back to work!';
               nextIsWorkTime = true;
               nextPhaseTypeValue = 'work';
+              if (currentPhaseType === 'longBreak') {
+                nextCycleCount = 0;
+              }
             }
 
+            setCycleCount(nextCycleCount);
             setMinutes(nextDuration);
             setSeconds(0);
             setIsWorkTime(nextIsWorkTime);
@@ -230,7 +239,7 @@ const PomodoroTimer = ({ onWorkTimeChange, onTimerActiveChange, themeToggle }) =
         clearInterval(interval);
       }
     };
-  }, [isActive, seconds, minutes, isWorkTime, workDuration, breakDuration, longBreakDuration, cycleCount, cyclesBeforeLongBreak, onWorkTimeChange, onTimerActiveChange, notifyUser]);
+  }, [isActive, seconds, minutes, isWorkTime, workDuration, breakDuration, longBreakDuration, cycleCount, normalizedCycleTarget, currentPhaseType, onWorkTimeChange, onTimerActiveChange, notifyUser]);
 
   useEffect(() => {
     if (onTimerActiveChange) {
@@ -264,22 +273,27 @@ const PomodoroTimer = ({ onWorkTimeChange, onTimerActiveChange, themeToggle }) =
     let notificationMessage;
     let nextIsWorkTime;
     let nextPhaseTypeValue;
+    let nextCycleCount = cycleCount;
 
     if (isWorkTime) {
       const completedCycles = cycleCount + 1;
-      const reachedLongBreak = completedCycles >= cyclesBeforeLongBreak;
+      const reachedLongBreak = completedCycles >= normalizedCycleTarget;
       nextDuration = reachedLongBreak ? longBreakDuration : breakDuration;
       notificationMessage = 'Time for a break!';
       nextIsWorkTime = false;
       nextPhaseTypeValue = reachedLongBreak ? 'longBreak' : 'break';
-      setCycleCount(completedCycles);
+      nextCycleCount = completedCycles;
     } else {
       nextDuration = workDuration;
       notificationMessage = 'Back to work!';
       nextIsWorkTime = true;
       nextPhaseTypeValue = 'work';
+      if (currentPhaseType === 'longBreak') {
+        nextCycleCount = 0;
+      }
     }
 
+    setCycleCount(nextCycleCount);
     setMinutes(nextDuration);
     setSeconds(0);
     setIsWorkTime(nextIsWorkTime);
@@ -322,8 +336,11 @@ const PomodoroTimer = ({ onWorkTimeChange, onTimerActiveChange, themeToggle }) =
   };
 
   const renderCycleProgress = () => {
-    const totalCycles = cyclesBeforeLongBreak;
-    const completedCycles = cycleCount % totalCycles;
+    const totalCycles = normalizedCycleTarget;
+    const normalizedCompletedCycles = cycleCount === 0 ? 0 : (cycleCount % totalCycles || totalCycles);
+    const displayedCycles = isWorkTime
+      ? Math.min(normalizedCompletedCycles + 1, totalCycles)
+      : normalizedCompletedCycles;
 
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5 }}>
@@ -336,7 +353,7 @@ const PomodoroTimer = ({ onWorkTimeChange, onTimerActiveChange, themeToggle }) =
               key={index}
               sx={{
                 fontSize: '0.85rem',
-                color: index < completedCycles ? 'primary.main' : 'action.disabled'
+                color: index < displayedCycles ? 'primary.main' : 'action.disabled'
               }}
             />
           ))}
