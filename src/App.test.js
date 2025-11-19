@@ -9,12 +9,12 @@ test('renders pomodoro timer', () => {
 
 test('renders youtube player input', () => {
   render(<App />);
-  const inputElement = screen.getByLabelText(/youtube video url/i);
+  const inputElement = screen.getByLabelText(/youtube url o id video/i);
   expect(inputElement).toBeInTheDocument();
 });
 
-test('renders youtube search button', () => {
+test('renders youtube load button', () => {
   render(<App />);
-  const searchButton = screen.getByLabelText(/search/i);
-  expect(searchButton).toBeInTheDocument();
+  const loadButton = screen.getByText(/carica/i);
+  expect(loadButton).toBeInTheDocument();
 });
