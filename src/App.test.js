@@ -13,8 +13,8 @@ test('renders youtube player input', () => {
   expect(inputElement).toBeInTheDocument();
 });
 
-test('renders load video button', () => {
+test('renders youtube search button', () => {
   render(<App />);
-  const buttonElement = screen.getByText(/load video/i);
-  expect(buttonElement).toBeInTheDocument();
+  const searchButton = screen.getByLabelText(/search/i);
+  expect(searchButton).toBeInTheDocument();
 });

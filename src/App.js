@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import PomodoroTimer from './PomodoroTimer';
 import YouTubePlayer from './YouTubePlayer';
 import { Container, CssBaseline, Box, createTheme, ThemeProvider, useMediaQuery, IconButton } from '@mui/material';
@@ -7,6 +7,7 @@ import Brightness7Icon from '@mui/icons-material/Brightness7';
 
 function App() {
   const [videoId, setVideoId] = useState('');
+  const [isWorkTime, setIsWorkTime] = useState(true);
   const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
   const [darkMode, setDarkMode] = useState(prefersDarkMode);
 
@@ -32,6 +33,10 @@ function App() {
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
   };
+
+  const handleWorkTimeChange = useCallback((isWorkTime) => {
+    setIsWorkTime(isWorkTime);
+  }, []);
 
   return (
     <ThemeProvider theme={theme}>
@@ -60,18 +65,19 @@ function App() {
           >
             {darkMode ? <Brightness7Icon /> : <Brightness4Icon />}
           </IconButton>
-          <PomodoroTimer />
+          <PomodoroTimer onWorkTimeChange={handleWorkTimeChange} />
           <YouTubePlayer onVideoChange={setVideoId} />
           {videoId && (
             <Box sx={{ mt: 4, borderRadius: 2, overflow: 'hidden' }}>
               <iframe
                 width="100%"
                 height="315"
-                src={`https://www.youtube.com/embed/${videoId}`}
+                src={`https://www.youtube.com/embed/${videoId}?${isWorkTime ? 'autoplay=1' : 'autoplay=0'}`}
                 frameBorder="0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
                 title="YouTube video player"
+                key={`${videoId}-${isWorkTime}`}
               />
             </Box>
           )}
