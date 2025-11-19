@@ -1,10 +1,115 @@
-import React, { useState, useEffect } from 'react';
-import { Button, Typography, Box, TextField, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  Button,
+  Typography,
+  Box,
+  TextField,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Stack,
+  Fab,
+  Tooltip,
+  Chip
+} from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import CircleIcon from '@mui/icons-material/Circle';
+import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded';
+import PauseRoundedIcon from '@mui/icons-material/PauseRounded';
+import ReplayIcon from '@mui/icons-material/Replay';
+import SkipNextIcon from '@mui/icons-material/SkipNext';
 
-const PomodoroTimer = ({ onWorkTimeChange, onTimerActiveChange }) => {
-  // Load settings from localStorage on mount
+const AnalogClock = ({ remainingSeconds, totalSeconds }) => {
+  const theme = useTheme();
+  const safeTotal = totalSeconds > 0 ? totalSeconds : 1;
+  const remainingRatio = Math.max(0, Math.min(remainingSeconds / safeTotal, 1));
+  const elapsedAngle = (1 - remainingRatio) * 360;
+  const minuteRotation = elapsedAngle;
+  const secondRotation = ((60 - (remainingSeconds % 60)) / 60) * 360;
+  const trackColor = theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)';
+  const minuteColor = theme.palette.primary.main;
+  const secondColor = theme.palette.secondary.main;
+
+  return (
+    <Box
+      sx={{
+        position: 'relative',
+        width: { xs: 220, sm: 260 },
+        height: { xs: 220, sm: 260 },
+        mx: 'auto',
+        pointerEvents: 'none'
+      }}
+      aria-hidden="true"
+    >
+      <Box
+        sx={{
+          position: 'absolute',
+          inset: 0,
+          borderRadius: '50%',
+          border: `6px solid ${trackColor}`,
+          backgroundImage: `conic-gradient(${minuteColor} ${elapsedAngle}deg, ${trackColor} ${elapsedAngle}deg 360deg)`,
+          transition: 'background-image 0.3s ease'
+        }}
+      />
+      <Box
+        sx={{
+          position: 'absolute',
+          inset: '14%',
+          borderRadius: '50%',
+          backgroundColor: theme.palette.background.paper,
+          boxShadow: theme.palette.mode === 'dark'
+            ? 'inset 0 0 25px rgba(0,0,0,0.8)'
+            : 'inset 0 0 25px rgba(0,0,0,0.15)'
+        }}
+      />
+      <Box
+        sx={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          width: 6,
+          height: '34%',
+          borderRadius: 999,
+          backgroundColor: minuteColor,
+          transformOrigin: 'bottom center',
+          transform: `translate(-50%, -100%) rotate(${minuteRotation}deg)`,
+          transition: 'transform 0.3s ease'
+        }}
+      />
+      <Box
+        sx={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          width: 3,
+          height: '40%',
+          borderRadius: 999,
+          backgroundColor: secondColor,
+          transformOrigin: 'bottom center',
+          transform: `translate(-50%, -100%) rotate(${secondRotation}deg)`,
+          transition: 'transform 0.1s linear'
+        }}
+      />
+      <Box
+        sx={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          width: 14,
+          height: 14,
+          borderRadius: '50%',
+          backgroundColor: secondColor,
+          boxShadow: `0 0 12px ${secondColor}`
+        }}
+      />
+    </Box>
+  );
+};
+
+const PomodoroTimer = ({ onWorkTimeChange, onTimerActiveChange, themeToggle }) => {
+  const theme = useTheme();
+
   const loadSettings = () => {
     const saved = localStorage.getItem('pomodoroSettings');
     if (saved) {
@@ -35,6 +140,32 @@ const PomodoroTimer = ({ onWorkTimeChange, onTimerActiveChange }) => {
   const [cyclesBeforeLongBreak, setCyclesBeforeLongBreak] = useState(initialSettings.cyclesBeforeLongBreak);
   const [cycleCount, setCycleCount] = useState(0);
   const [expanded, setExpanded] = useState(false);
+  const [currentPhaseType, setCurrentPhaseType] = useState('work');
+  const [currentPhaseDuration, setCurrentPhaseDuration] = useState(initialSettings.workDuration);
+
+  const dividerColor = theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)';
+  const totalPhaseSeconds = currentPhaseDuration * 60;
+  const remainingSeconds = minutes * 60 + seconds;
+  const hasProgress = remainingSeconds !== totalPhaseSeconds;
+  const phaseLabel = isWorkTime ? 'Work Time' : currentPhaseType === 'longBreak' ? 'Long Break' : 'Break Time';
+
+  const notifyUser = useCallback((title, body) => {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      return;
+    }
+
+    const NotificationAPI = window.Notification;
+
+    if (NotificationAPI.permission === 'granted') {
+      new NotificationAPI(title, { body });
+    } else if (NotificationAPI.permission !== 'denied') {
+      NotificationAPI.requestPermission().then((permission) => {
+        if (permission === 'granted') {
+          new NotificationAPI(title, { body });
+        }
+      });
+    }
+  }, []);
 
   useEffect(() => {
     let interval = null;
@@ -44,52 +175,40 @@ const PomodoroTimer = ({ onWorkTimeChange, onTimerActiveChange }) => {
           if (minutes === 0) {
             setIsActive(false);
 
-            // Determine next duration and update cycle count
             let nextDuration;
             let notificationMessage;
+            let nextIsWorkTime;
+            let nextPhaseTypeValue;
+
             if (isWorkTime) {
-              // Work time just ended
-              if (cycleCount + 1 >= cyclesBeforeLongBreak) {
-                nextDuration = longBreakDuration;
-              } else {
-                nextDuration = breakDuration;
-              }
+              const reachedLongBreak = cycleCount + 1 >= cyclesBeforeLongBreak;
+              nextDuration = reachedLongBreak ? longBreakDuration : breakDuration;
               notificationMessage = 'Time for a break!';
+              nextIsWorkTime = false;
+              nextPhaseTypeValue = reachedLongBreak ? 'longBreak' : 'break';
             } else {
-              // Break time just ended
               nextDuration = workDuration;
-              setCycleCount(prev => prev + 1);
               notificationMessage = 'Back to work!';
+              nextIsWorkTime = true;
+              nextPhaseTypeValue = 'work';
+              setCycleCount((prev) => prev + 1);
             }
 
             setMinutes(nextDuration);
-            setIsWorkTime(!isWorkTime);
             setSeconds(0);
-            
-            // Notify parent component of work time change
+            setIsWorkTime(nextIsWorkTime);
+            setCurrentPhaseType(nextPhaseTypeValue);
+            setCurrentPhaseDuration(nextDuration);
+
             if (onWorkTimeChange) {
-              onWorkTimeChange(!isWorkTime);
+              onWorkTimeChange(nextIsWorkTime);
             }
 
-            // Notify parent component of timer active change
             if (onTimerActiveChange) {
               onTimerActiveChange(false);
             }
 
-            // Request notification permission
-            if (Notification.permission !== 'granted') {
-              Notification.requestPermission().then(permission => {
-                if (permission === 'granted') {
-                  new Notification('Timer Finished!', {
-                    body: notificationMessage
-                  });
-                }
-              });
-            } else {
-              new Notification('Timer Finished!', {
-                body: notificationMessage
-              });
-            }
+            notifyUser('Timer Finished!', notificationMessage);
           } else {
             setMinutes(minutes - 1);
             setSeconds(59);
@@ -98,13 +217,15 @@ const PomodoroTimer = ({ onWorkTimeChange, onTimerActiveChange }) => {
           setSeconds(seconds - 1);
         }
       }, 1000);
-    } else if (!isActive && seconds !== 0) {
-      clearInterval(interval);
     }
-    return () => clearInterval(interval);
-  }, [isActive, seconds, minutes, isWorkTime, workDuration, breakDuration, longBreakDuration, cycleCount, cyclesBeforeLongBreak, onWorkTimeChange, onTimerActiveChange]);
 
-  // Notify parent component when timer active state changes
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [isActive, seconds, minutes, isWorkTime, workDuration, breakDuration, longBreakDuration, cycleCount, cyclesBeforeLongBreak, onWorkTimeChange, onTimerActiveChange, notifyUser]);
+
   useEffect(() => {
     if (onTimerActiveChange) {
       onTimerActiveChange(isActive);
@@ -121,8 +242,9 @@ const PomodoroTimer = ({ onWorkTimeChange, onTimerActiveChange }) => {
     setSeconds(0);
     setIsWorkTime(true);
     setCycleCount(0);
-    
-    // Notify parent components of state changes
+    setCurrentPhaseType('work');
+    setCurrentPhaseDuration(workDuration);
+
     if (onWorkTimeChange) {
       onWorkTimeChange(true);
     }
@@ -132,66 +254,56 @@ const PomodoroTimer = ({ onWorkTimeChange, onTimerActiveChange }) => {
   };
 
   const skipTimer = () => {
-    // Determine next duration and update cycle count
     let nextDuration;
     let notificationMessage;
     let nextIsWorkTime;
-    
+    let nextPhaseTypeValue;
+
     if (isWorkTime) {
-      // Work time just ended
-      if (cycleCount + 1 >= cyclesBeforeLongBreak) {
-        nextDuration = longBreakDuration;
-      } else {
-        nextDuration = breakDuration;
-      }
+      const reachedLongBreak = cycleCount + 1 >= cyclesBeforeLongBreak;
+      nextDuration = reachedLongBreak ? longBreakDuration : breakDuration;
       notificationMessage = 'Time for a break!';
       nextIsWorkTime = false;
+      nextPhaseTypeValue = reachedLongBreak ? 'longBreak' : 'break';
     } else {
-      // Break time just ended
       nextDuration = workDuration;
-      setCycleCount(prev => prev + 1);
       notificationMessage = 'Back to work!';
       nextIsWorkTime = true;
+      nextPhaseTypeValue = 'work';
+      setCycleCount((prev) => prev + 1);
     }
 
     setMinutes(nextDuration);
-    setIsWorkTime(nextIsWorkTime);
     setSeconds(0);
-    setIsActive(true); // Auto-start the next timer after skip
-    
-    // Notify parent component of work time change
+    setIsWorkTime(nextIsWorkTime);
+    setCurrentPhaseType(nextPhaseTypeValue);
+    setCurrentPhaseDuration(nextDuration);
+    setIsActive(true);
+
     if (onWorkTimeChange) {
       onWorkTimeChange(nextIsWorkTime);
     }
 
-    // Notify parent component of timer active change
     if (onTimerActiveChange) {
       onTimerActiveChange(true);
     }
 
-    // Request notification permission
-    if (Notification.permission !== 'granted') {
-      Notification.requestPermission().then(permission => {
-        if (permission === 'granted') {
-          new Notification('Timer Skipped!', {
-            body: notificationMessage
-          });
-        }
-      });
-    } else {
-      new Notification('Timer Skipped!', {
-        body: notificationMessage
-      });
-    }
+    notifyUser('Timer Skipped!', notificationMessage);
   };
 
   const applySettings = () => {
     if (!isActive) {
-      setMinutes(isWorkTime ? workDuration : breakDuration);
+      const targetDuration = isWorkTime
+        ? workDuration
+        : currentPhaseType === 'longBreak'
+          ? longBreakDuration
+          : breakDuration;
+
+      setMinutes(targetDuration);
       setSeconds(0);
-      setExpanded(false); // Collapse the panel after applying settings
-      
-      // Save settings to localStorage
+      setCurrentPhaseDuration(targetDuration);
+      setExpanded(false);
+
       const settings = {
         workDuration,
         breakDuration,
@@ -207,13 +319,16 @@ const PomodoroTimer = ({ onWorkTimeChange, onTimerActiveChange }) => {
     const completedCycles = cycleCount % totalCycles;
 
     return (
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5 }}>
+        <Typography variant="caption" color="text.secondary">
+          Cicli
+        </Typography>
         <Box sx={{ display: 'flex', gap: 0.5 }}>
           {Array.from({ length: totalCycles }).map((_, index) => (
             <CircleIcon
               key={index}
               sx={{
-                fontSize: 'small',
+                fontSize: '0.85rem',
                 color: index < completedCycles ? 'primary.main' : 'action.disabled'
               }}
             />
@@ -224,78 +339,195 @@ const PomodoroTimer = ({ onWorkTimeChange, onTimerActiveChange }) => {
   };
 
   return (
-    <Box sx={{ textAlign: 'center', mt: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        {isWorkTime ? 'Work Time' : 'Break Time'}
-      </Typography>
-      <Typography variant="h2" gutterBottom>
-        {minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
-      </Typography>
-      <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 2 }}>
-        <Button variant="contained" onClick={toggleTimer} sx={{ mr: 2 }}>
-          {isActive ? 'Pause' : 'Start'}
-        </Button>
-        <Button variant="outlined" onClick={resetTimer} sx={{ mr: 2 }}>
-          Reset
-        </Button>
-        <Button variant="outlined" onClick={skipTimer}>
-          Skip
-        </Button>
+    <Box sx={{ mt: 1 }}>
+      <Box
+        sx={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 2
+        }}
+      >
+        <Accordion
+          expanded={expanded}
+          onChange={(_, isExpanded) => setExpanded(isExpanded)}
+          sx={{
+            flex: '1 1 280px',
+            border: `1px solid ${dividerColor}`,
+            borderRadius: 2,
+            boxShadow: 'none',
+            backgroundColor: 'background.default'
+          }}
+        >
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Box
+              sx={{
+                width: '100%',
+                display: 'flex',
+                flexWrap: 'wrap',
+                justifyContent: 'space-between',
+                gap: 2,
+                alignItems: { xs: 'flex-start', sm: 'center' }
+              }}
+            >
+              <Box>
+                <Typography variant="subtitle2" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
+                  Configurazione
+                </Typography>
+                <Typography variant="body2" color="text.primary">
+                  {`${workDuration}′ lavoro · ${breakDuration}′ pausa · ${longBreakDuration}′ lunga`}
+                </Typography>
+              </Box>
+              {renderCycleProgress()}
+            </Box>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <TextField
+                  label="Work Duration (min)"
+                  type="number"
+                  value={workDuration}
+                  onChange={(e) => setWorkDuration(Number(e.target.value))}
+                  inputProps={{ min: 1, max: 60 }}
+                  sx={{ flex: 1, minWidth: 140 }}
+                />
+                <TextField
+                  label="Break Duration (min)"
+                  type="number"
+                  value={breakDuration}
+                  onChange={(e) => setBreakDuration(Number(e.target.value))}
+                  inputProps={{ min: 1, max: 30 }}
+                  sx={{ flex: 1, minWidth: 140 }}
+                />
+              </Box>
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <TextField
+                  label="Long Break Duration (min)"
+                  type="number"
+                  value={longBreakDuration}
+                  onChange={(e) => setLongBreakDuration(Number(e.target.value))}
+                  inputProps={{ min: 5, max: 60 }}
+                  sx={{ flex: 1, minWidth: 140 }}
+                />
+                <TextField
+                  label="Cycles Before Long Break"
+                  type="number"
+                  value={cyclesBeforeLongBreak}
+                  onChange={(e) => setCyclesBeforeLongBreak(Number(e.target.value))}
+                  inputProps={{ min: 1, max: 10 }}
+                  sx={{ flex: 1, minWidth: 140 }}
+                />
+              </Box>
+              <Button variant="contained" onClick={applySettings} disabled={isActive} sx={{ mt: 1 }}>
+                Apply Settings
+              </Button>
+            </Box>
+          </AccordionDetails>
+        </Accordion>
+        {themeToggle && (
+          <Box sx={{ flexShrink: 0 }}>
+            {themeToggle}
+          </Box>
+        )}
       </Box>
 
-      <Accordion expanded={expanded} onChange={() => setExpanded(!expanded)}>
-        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-          <Box sx={{ width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Typography variant="subtitle1">
-              {`${workDuration} / ${breakDuration}`}
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: { xs: 'column', md: 'row' },
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: { xs: 3, md: 6 },
+          mt: 4
+        }}
+      >
+        <Box sx={{ flex: 1, width: '100%', textAlign: 'center' }}>
+          <Chip
+            label={phaseLabel}
+            color={isWorkTime ? 'primary' : 'secondary'}
+            variant="outlined"
+            sx={{ fontWeight: 600 }}
+          />
+          <Box sx={{ position: 'relative', display: 'inline-flex', mt: 3 }}>
+            <AnalogClock remainingSeconds={remainingSeconds} totalSeconds={totalPhaseSeconds} />
+            <Typography
+              variant="h2"
+              sx={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                fontSize: { xs: '2.6rem', sm: '3.4rem' },
+                fontWeight: 700,
+                letterSpacing: 4,
+                opacity: isActive ? 1 : 0,
+                transition: 'opacity 0.3s ease',
+                pointerEvents: 'none'
+              }}
+            >
+              {minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
             </Typography>
-            {renderCycleProgress()}
+            {!isActive && (
+              <Fab
+                variant="extended"
+                color="primary"
+                onClick={toggleTimer}
+                aria-label="Avvia o riprendi il timer"
+                sx={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  minWidth: 200,
+                  height: 64,
+                  boxShadow: 8
+                }}
+              >
+                <PlayArrowRoundedIcon sx={{ mr: 1 }} />
+                {hasProgress ? 'Resume' : 'Start'}
+              </Fab>
+            )}
           </Box>
-        </AccordionSummary>
-        <AccordionDetails>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <TextField
-                label="Work Duration (min)"
-                type="number"
-                value={workDuration}
-                onChange={(e) => setWorkDuration(Number(e.target.value))}
-                inputProps={{ min: 1, max: 60 }}
-                sx={{ flex: 1 }}
-              />
-              <TextField
-                label="Break Duration (min)"
-                type="number"
-                value={breakDuration}
-                onChange={(e) => setBreakDuration(Number(e.target.value))}
-                inputProps={{ min: 1, max: 30 }}
-                sx={{ flex: 1 }}
-              />
-            </Box>
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <TextField
-                label="Long Break Duration (min)"
-                type="number"
-                value={longBreakDuration}
-                onChange={(e) => setLongBreakDuration(Number(e.target.value))}
-                inputProps={{ min: 5, max: 60 }}
-                sx={{ flex: 1 }}
-              />
-              <TextField
-                label="Cycles Before Long Break"
-                type="number"
-                value={cyclesBeforeLongBreak}
-                onChange={(e) => setCyclesBeforeLongBreak(Number(e.target.value))}
-                inputProps={{ min: 1, max: 10 }}
-                sx={{ flex: 1 }}
-              />
-            </Box>
-            <Button variant="contained" onClick={applySettings} sx={{ mt: 2 }}>
-              Apply Settings
-            </Button>
-          </Box>
-        </AccordionDetails>
-      </Accordion>
+        </Box>
+
+        <Stack
+          direction={{ xs: 'row', md: 'column' }}
+          spacing={2}
+          alignItems="center"
+          justifyContent="center"
+          sx={{ flexWrap: { xs: 'wrap', md: 'nowrap' } }}
+        >
+          {isActive && (
+            <Tooltip title="Pause timer">
+              <Fab color="secondary" onClick={toggleTimer} aria-label="Pausa timer">
+                <PauseRoundedIcon />
+              </Fab>
+            </Tooltip>
+          )}
+          <Tooltip title="Reset timer">
+            <Fab
+              color="default"
+              onClick={resetTimer}
+              aria-label="Reset timer"
+              sx={{ border: `1px solid ${dividerColor}` }}
+            >
+              <ReplayIcon />
+            </Fab>
+          </Tooltip>
+          <Tooltip title="Skip session">
+            <Fab
+              color="default"
+              onClick={skipTimer}
+              aria-label="Skip session"
+              sx={{ border: `1px solid ${dividerColor}` }}
+            >
+              <SkipNextIcon />
+            </Fab>
+          </Tooltip>
+        </Stack>
+      </Box>
     </Box>
   );
 };

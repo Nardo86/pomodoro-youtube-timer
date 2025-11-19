@@ -36,6 +36,25 @@ function App() {
     setDarkMode(!darkMode);
   };
 
+  const themeToggleButton = (
+    <IconButton
+      onClick={toggleDarkMode}
+      aria-label={darkMode ? 'Passa al tema chiaro' : 'Passa al tema scuro'}
+      sx={{
+        borderRadius: '50%',
+        border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.12)'}`,
+        backgroundColor: darkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+        color: darkMode ? 'warning.light' : 'primary.main',
+        transition: 'all 0.3s ease',
+        '&:hover': {
+          backgroundColor: darkMode ? 'rgba(255, 255, 255, 0.16)' : 'rgba(0, 0, 0, 0.08)'
+        }
+      }}
+    >
+      {darkMode ? <Brightness7Icon /> : <Brightness4Icon />}
+    </IconButton>
+  );
+
   const handleWorkTimeChange = useCallback((isWorkTime) => {
     setIsWorkTime(isWorkTime);
   }, []);
@@ -110,42 +129,29 @@ function App() {
 
   return (
     <ThemeProvider theme={theme}>
-      <Container maxWidth="sm">
+      <Container maxWidth="md">
         <CssBaseline />
-        <Box sx={{
-          my: 4,
-          p: 3,
-          borderRadius: 2,
-          boxShadow: 3,
-          backgroundColor: 'background.paper',
-          position: 'relative'
-        }}>
-          <IconButton
-            onClick={toggleDarkMode}
-            sx={{
-              position: 'absolute',
-              top: 16,
-              right: 16,
-              backgroundColor: darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-              color: darkMode ? 'white' : 'black',
-              '&:hover': {
-                backgroundColor: darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
-              }
-            }}
-          >
-            {darkMode ? <Brightness7Icon /> : <Brightness4Icon />}
-          </IconButton>
-          <PomodoroTimer 
+        <Box
+          sx={{
+            my: { xs: 2, md: 4 },
+            p: { xs: 2, sm: 4 },
+            borderRadius: 3,
+            boxShadow: { xs: 2, md: 6 },
+            backgroundColor: 'background.paper',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 4
+          }}
+        >
+          <PomodoroTimer
             onWorkTimeChange={handleWorkTimeChange}
             onTimerActiveChange={handleTimerActiveChange}
+            themeToggle={themeToggleButton}
           />
           <YouTubePlayer onVideoChange={setVideoId} />
           {videoId && (
-            <Box sx={{ mt: 4, borderRadius: 2, overflow: 'hidden' }}>
-              <div
-                id="youtube-player"
-                style={{ width: '100%', height: '315px' }}
-              />
+            <Box sx={{ mt: 2, borderRadius: 2, overflow: 'hidden' }}>
+              <div id="youtube-player" style={{ width: '100%', height: '315px' }} />
             </Box>
           )}
         </Box>
