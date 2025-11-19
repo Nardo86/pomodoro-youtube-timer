@@ -102,81 +102,81 @@ jobs:
         cp -r build/* nginx-package/
         
         # Create nginx configuration helper
-        cat > nginx-package/nginx.conf << 'EOF'
-server {
-    listen 80;
-    server_name your-domain.com;
+        cat > nginx-package/nginx.conf << 'EOFNGINX'
+        server {
+            listen 80;
+            server_name your-domain.com;
 
-    root /var/www/html;
-    index index.html;
+            root /var/www/html;
+            index index.html;
 
-    # Enable gzip compression
-    gzip on;
-    gzip_vary on;
-    gzip_min_length 1024;
-    gzip_types text/plain text/css text/xml text/javascript application/javascript application/xml+rss application/json;
+            # Enable gzip compression
+            gzip on;
+            gzip_vary on;
+            gzip_min_length 1024;
+            gzip_types text/plain text/css text/xml text/javascript application/javascript application/xml+rss application/json;
 
-    # Security headers
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header Referrer-Policy "no-referrer-when-downgrade" always;
-    add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline'" always;
+            # Security headers
+            add_header X-Frame-Options "SAMEORIGIN" always;
+            add_header X-XSS-Protection "1; mode=block" always;
+            add_header X-Content-Type-Options "nosniff" always;
+            add_header Referrer-Policy "no-referrer-when-downgrade" always;
+            add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline'" always;
 
-    # Handle React Router
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
+            # Handle React Router
+            location / {
+                try_files \$uri \$uri/ /index.html;
+            }
 
-    # Cache static assets
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
+            # Cache static assets
+            location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)\$ {
+                expires 1y;
+                add_header Cache-Control "public, immutable";
+            }
 
-    # Service worker
-    location = /service-worker.js {
-        expires off;
-        add_header Cache-Control "no-cache, no-store, must-revalidate";
-    }
-}
-EOF
+            # Service worker
+            location = /service-worker.js {
+                expires off;
+                add_header Cache-Control "no-cache, no-store, must-revalidate";
+            }
+        }
+        EOFNGINX
 
         # Create deployment script
-        cat > nginx-package/deploy.sh << 'EOF'
-#!/bin/bash
-set -e
+        cat > nginx-package/deploy.sh << 'EOFDEPLOY'
+        #!/bin/bash
+        set -e
 
-echo "🚀 Deploying Pomodoro Timer to Nginx..."
+        echo "🚀 Deploying Pomodoro Timer to Nginx..."
 
-# Check if running as root
-if [ "$EUID" -ne 0 ]; then
-    echo "Please run as root (use sudo)"
-    exit 1
-fi
+        # Check if running as root
+        if [ "\$EUID" -ne 0 ]; then
+            echo "Please run as root (use sudo)"
+            exit 1
+        fi
 
-# Backup current deployment
-if [ -d "/var/www/html" ]; then
-    echo "📦 Creating backup..."
-    cp -r /var/www/html /var/www/html.backup.$(date +%Y%m%d_%H%M%S)
-fi
+        # Backup current deployment
+        if [ -d "/var/www/html" ]; then
+            echo "📦 Creating backup..."
+            cp -r /var/www/html /var/www/html.backup.\$(date +%Y%m%d_%H%M%S)
+        fi
 
-# Copy new files
-echo "📁 Copying files..."
-cp -r * /var/www/html/
+        # Copy new files
+        echo "📁 Copying files..."
+        cp -r * /var/www/html/
 
-# Set correct permissions
-echo "🔐 Setting permissions..."
-chown -R www-data:www-data /var/www/html/
-chmod -R 755 /var/www/html/
+        # Set correct permissions
+        echo "🔐 Setting permissions..."
+        chown -R www-data:www-data /var/www/html/
+        chmod -R 755 /var/www/html/
 
-# Restart nginx
-echo "🔄 Restarting nginx..."
-systemctl reload nginx
+        # Restart nginx
+        echo "🔄 Restarting nginx..."
+        systemctl reload nginx
 
-echo "✅ Deployment completed successfully!"
-echo "🌐 Your app should be available at: http://your-domain.com"
-EOF
+        echo "✅ Deployment completed successfully!"
+        echo "🌐 Your app should be available at: http://your-domain.com"
+        EOFDEPLOY
 
         chmod +x nginx-package/deploy.sh
 
