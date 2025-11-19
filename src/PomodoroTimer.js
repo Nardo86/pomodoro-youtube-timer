@@ -26,7 +26,8 @@ const AnalogClock = ({ remainingSeconds, totalSeconds }) => {
   const remainingRatio = Math.max(0, Math.min(remainingSeconds / safeTotal, 1));
   const elapsedAngle = (1 - remainingRatio) * 360;
   const minuteRotation = elapsedAngle;
-  const secondRotation = ((60 - (remainingSeconds % 60)) / 60) * 360;
+  const currentSecond = remainingSeconds % 60;
+  const secondRotation = (currentSecond / 60) * 360;
   const trackColor = theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)';
   const minuteColor = theme.palette.primary.main;
   const secondColor = theme.palette.secondary.main;
@@ -48,8 +49,8 @@ const AnalogClock = ({ remainingSeconds, totalSeconds }) => {
           inset: 0,
           borderRadius: '50%',
           border: `6px solid ${trackColor}`,
-          backgroundImage: `conic-gradient(${minuteColor} ${elapsedAngle}deg, ${trackColor} ${elapsedAngle}deg 360deg)`,
-          transition: 'background-image 0.3s ease'
+          background: `conic-gradient(from 0deg, ${minuteColor} 0deg ${elapsedAngle}deg, ${trackColor} ${elapsedAngle}deg 360deg)`,
+          transition: 'background 0.3s ease'
         }}
       />
       <Box
@@ -69,12 +70,13 @@ const AnalogClock = ({ remainingSeconds, totalSeconds }) => {
           top: '50%',
           left: '50%',
           width: 6,
-          height: '34%',
-          borderRadius: 999,
+          height: '35%',
+          borderRadius: 3,
           backgroundColor: minuteColor,
-          transformOrigin: 'bottom center',
+          transformOrigin: 'center bottom',
           transform: `translate(-50%, -100%) rotate(${minuteRotation}deg)`,
-          transition: 'transform 0.3s ease'
+          transition: 'transform 0.3s ease',
+          zIndex: 2
         }}
       />
       <Box
@@ -84,11 +86,12 @@ const AnalogClock = ({ remainingSeconds, totalSeconds }) => {
           left: '50%',
           width: 3,
           height: '40%',
-          borderRadius: 999,
+          borderRadius: 2,
           backgroundColor: secondColor,
-          transformOrigin: 'bottom center',
+          transformOrigin: 'center bottom',
           transform: `translate(-50%, -100%) rotate(${secondRotation}deg)`,
-          transition: 'transform 0.1s linear'
+          transition: 'transform 0.1s linear',
+          zIndex: 3
         }}
       />
       <Box
@@ -100,7 +103,9 @@ const AnalogClock = ({ remainingSeconds, totalSeconds }) => {
           height: 14,
           borderRadius: '50%',
           backgroundColor: secondColor,
-          boxShadow: `0 0 12px ${secondColor}`
+          boxShadow: `0 0 12px ${secondColor}`,
+          transform: 'translate(-50%, -50%)',
+          zIndex: 4
         }}
       />
     </Box>
@@ -181,17 +186,18 @@ const PomodoroTimer = ({ onWorkTimeChange, onTimerActiveChange, themeToggle }) =
             let nextPhaseTypeValue;
 
             if (isWorkTime) {
-              const reachedLongBreak = cycleCount + 1 >= cyclesBeforeLongBreak;
+              const completedCycles = cycleCount + 1;
+              const reachedLongBreak = completedCycles >= cyclesBeforeLongBreak;
               nextDuration = reachedLongBreak ? longBreakDuration : breakDuration;
               notificationMessage = 'Time for a break!';
               nextIsWorkTime = false;
               nextPhaseTypeValue = reachedLongBreak ? 'longBreak' : 'break';
+              setCycleCount(completedCycles);
             } else {
               nextDuration = workDuration;
               notificationMessage = 'Back to work!';
               nextIsWorkTime = true;
               nextPhaseTypeValue = 'work';
-              setCycleCount((prev) => prev + 1);
             }
 
             setMinutes(nextDuration);
@@ -260,17 +266,18 @@ const PomodoroTimer = ({ onWorkTimeChange, onTimerActiveChange, themeToggle }) =
     let nextPhaseTypeValue;
 
     if (isWorkTime) {
-      const reachedLongBreak = cycleCount + 1 >= cyclesBeforeLongBreak;
+      const completedCycles = cycleCount + 1;
+      const reachedLongBreak = completedCycles >= cyclesBeforeLongBreak;
       nextDuration = reachedLongBreak ? longBreakDuration : breakDuration;
       notificationMessage = 'Time for a break!';
       nextIsWorkTime = false;
       nextPhaseTypeValue = reachedLongBreak ? 'longBreak' : 'break';
+      setCycleCount(completedCycles);
     } else {
       nextDuration = workDuration;
       notificationMessage = 'Back to work!';
       nextIsWorkTime = true;
       nextPhaseTypeValue = 'work';
-      setCycleCount((prev) => prev + 1);
     }
 
     setMinutes(nextDuration);
