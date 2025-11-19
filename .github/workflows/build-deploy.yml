@@ -1,0 +1,81 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run tests
+      run: npm test -- --coverage --watchAll=false
+
+    - name: Build application
+      run: npm run build
+
+    - name: Create deployment package
+      run: |
+        mkdir -p deployment
+        tar -czf deployment/pomodoro-timer-$(git rev-parse --short HEAD).tar.gz -C build .
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-files
+        path: |
+          build/
+          deployment/
+        retention-days: 30
+
+    - name: Generate deployment summary
+      run: |
+        echo "## 🚀 Build Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "✅ **Build Status**: Success" >> $GITHUB_STEP_SUMMARY
+        echo "📦 **Build Size**: $(du -sh build | cut -f1)" >> $GITHUB_STEP_SUMMARY
+        echo "🔗 **Commit**: $(git rev-parse --short HEAD)" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📁 Deployment Package" >> $GITHUB_STEP_SUMMARY
+        echo "The deployment package is available in the artifacts section." >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 🛠️ Nginx Deployment Instructions" >> $GITHUB_STEP_SUMMARY
+        echo "1. Download the \`build-files\` artifact" >> $GITHUB_STEP_SUMMARY
+        echo "2. Extract the contents to nginx www directory:" >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+        echo "tar -xzf deployment/pomodoro-timer-*.tar.gz -C /var/www/html/" >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+  deploy-preview:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: build-files
+        path: ./build
+
+    - name: Deploy to preview environment
+      run: |
+        echo "🚀 Preview deployment ready"
+        echo "Build files are available for testing"
+        ls -la build/

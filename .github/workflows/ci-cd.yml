@@ -1,0 +1,199 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run linting
+      run: npm run lint --if-present
+
+    - name: Run tests
+      run: npm test -- --coverage --watchAll=false --ci
+
+    - name: Upload coverage to Codecov
+      if: matrix.node-version == '20.x'
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./coverage/lcov.info
+        flags: unittests
+        name: codecov-umbrella
+
+  security:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run security audit
+      run: npm audit --audit-level=moderate
+
+    - name: Check for vulnerabilities
+      run: |
+        if [ $(npm audit --json | jq -r '.metadata.vulnerabilities.total') -gt 0 ]; then
+          echo "❌ Security vulnerabilities found!"
+          npm audit
+          exit 1
+        else
+          echo "✅ No security vulnerabilities found"
+        fi
+
+  build:
+    needs: [test, security]
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build application
+      run: npm run build
+
+    - name: Analyze bundle size
+      run: |
+        echo "## 📊 Bundle Size Analysis" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "File sizes after gzip:" >> $GITHUB_STEP_SUMMARY
+        find build/static -name "*.js" -o -name "*.css" | xargs ls -lh | awk '{print $5, $9}' | while read size file; do
+          echo "- \`$file\`: $size" >> $GITHUB_STEP_SUMMARY
+        done
+
+    - name: Create nginx deployment package
+      run: |
+        mkdir -p nginx-package
+        cp -r build/* nginx-package/
+        
+        # Create nginx configuration helper
+        cat > nginx-package/nginx.conf << 'EOF'
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    root /var/www/html;
+    index index.html;
+
+    # Enable gzip compression
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_types text/plain text/css text/xml text/javascript application/javascript application/xml+rss application/json;
+
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "no-referrer-when-downgrade" always;
+    add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline'" always;
+
+    # Handle React Router
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Cache static assets
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # Service worker
+    location = /service-worker.js {
+        expires off;
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+    }
+}
+EOF
+
+        # Create deployment script
+        cat > nginx-package/deploy.sh << 'EOF'
+#!/bin/bash
+set -e
+
+echo "🚀 Deploying Pomodoro Timer to Nginx..."
+
+# Check if running as root
+if [ "$EUID" -ne 0 ]; then
+    echo "Please run as root (use sudo)"
+    exit 1
+fi
+
+# Backup current deployment
+if [ -d "/var/www/html" ]; then
+    echo "📦 Creating backup..."
+    cp -r /var/www/html /var/www/html.backup.$(date +%Y%m%d_%H%M%S)
+fi
+
+# Copy new files
+echo "📁 Copying files..."
+cp -r * /var/www/html/
+
+# Set correct permissions
+echo "🔐 Setting permissions..."
+chown -R www-data:www-data /var/www/html/
+chmod -R 755 /var/www/html/
+
+# Restart nginx
+echo "🔄 Restarting nginx..."
+systemctl reload nginx
+
+echo "✅ Deployment completed successfully!"
+echo "🌐 Your app should be available at: http://your-domain.com"
+EOF
+
+        chmod +x nginx-package/deploy.sh
+
+    - name: Package for deployment
+      run: |
+        tar -czf pomodoro-timer-nginx-$(git rev-parse --short HEAD).tar.gz -C nginx-package .
+
+    - name: Upload deployment package
+      uses: actions/upload-artifact@v4
+      with:
+        name: nginx-deployment-package
+        path: pomodoro-timer-nginx-*.tar.gz
+        retention-days: 90
+
+    - name: Upload nginx configuration
+      uses: actions/upload-artifact@v4
+      with:
+        name: nginx-config
+        path: nginx-package/nginx.conf
+        retention-days: 90

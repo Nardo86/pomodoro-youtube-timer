@@ -61,9 +61,27 @@ A productivity application that combines the Pomodoro technique with YouTube vid
    npm start
    ```
 
-## Deployment with Nginx
+## 🚀 Automated Deployment
 
-To deploy the application with Nginx:
+This project includes automated GitHub Actions for building and deployment:
+
+- ✅ **CI/CD Pipeline**: Automated testing, security scanning, and builds
+- 📦 **Nginx Packages**: Ready-to-deploy packages for nginx
+- 🔧 **Zero Config**: Pre-configured nginx settings included
+- 📊 **Build Analytics**: Bundle size and performance tracking
+
+### Quick Deploy with GitHub Actions
+
+1. Push to `main`/`master` branch
+2. Download the `nginx-deployment-package` from Actions
+3. Extract to nginx directory: `tar -xzf pomodoro-timer-nginx-*.tar.gz -C /var/www/html/`
+4. Reload nginx: `sudo systemctl reload nginx`
+
+📖 **See [DEPLOYMENT.md](DEPLOYMENT.md) for complete deployment guide**
+
+## Manual Deployment with Nginx
+
+To deploy the application manually with Nginx:
 
 1. Build the production version:
    ```
@@ -98,6 +116,11 @@ Remember to:
 - Adjust the port number in the proxy_pass directive if your backend API runs on a different port
 - Configure SSL if you want to use HTTPS
 - Set up proper permissions for the web server to access the files
+
+## 📚 Documentation
+
+- 📖 **[DEPLOYMENT.md](DEPLOYMENT.md)** - Complete deployment guide with GitHub Actions
+- 🛠️ **[DEVELOPMENT.md](DEVELOPMENT.md)** - Development setup and architecture guide
 
 ## Contributing
 
