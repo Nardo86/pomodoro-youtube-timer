@@ -3,7 +3,7 @@ import { Button, Typography, Box, TextField, Accordion, AccordionSummary, Accord
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import CircleIcon from '@mui/icons-material/Circle';
 
-const PomodoroTimer = ({ onWorkTimeChange }) => {
+const PomodoroTimer = ({ onWorkTimeChange, onTimerActiveChange }) => {
   // Load settings from localStorage on mount
   const loadSettings = () => {
     const saved = localStorage.getItem('pomodoroSettings');
@@ -71,6 +71,11 @@ const PomodoroTimer = ({ onWorkTimeChange }) => {
               onWorkTimeChange(!isWorkTime);
             }
 
+            // Notify parent component of timer active change
+            if (onTimerActiveChange) {
+              onTimerActiveChange(false);
+            }
+
             // Request notification permission
             if (Notification.permission !== 'granted') {
               Notification.requestPermission().then(permission => {
@@ -97,7 +102,14 @@ const PomodoroTimer = ({ onWorkTimeChange }) => {
       clearInterval(interval);
     }
     return () => clearInterval(interval);
-  }, [isActive, seconds, minutes, isWorkTime, workDuration, breakDuration, longBreakDuration, cycleCount, cyclesBeforeLongBreak, onWorkTimeChange]);
+  }, [isActive, seconds, minutes, isWorkTime, workDuration, breakDuration, longBreakDuration, cycleCount, cyclesBeforeLongBreak, onWorkTimeChange, onTimerActiveChange]);
+
+  // Notify parent component when timer active state changes
+  useEffect(() => {
+    if (onTimerActiveChange) {
+      onTimerActiveChange(isActive);
+    }
+  }, [isActive, onTimerActiveChange]);
 
   const toggleTimer = () => {
     setIsActive(!isActive);
@@ -109,14 +121,22 @@ const PomodoroTimer = ({ onWorkTimeChange }) => {
     setSeconds(0);
     setIsWorkTime(true);
     setCycleCount(0);
+    
+    // Notify parent components of state changes
+    if (onWorkTimeChange) {
+      onWorkTimeChange(true);
+    }
+    if (onTimerActiveChange) {
+      onTimerActiveChange(false);
+    }
   };
 
   const skipTimer = () => {
-    setIsActive(false);
-
     // Determine next duration and update cycle count
     let nextDuration;
     let notificationMessage;
+    let nextIsWorkTime;
+    
     if (isWorkTime) {
       // Work time just ended
       if (cycleCount + 1 >= cyclesBeforeLongBreak) {
@@ -125,33 +145,41 @@ const PomodoroTimer = ({ onWorkTimeChange }) => {
         nextDuration = breakDuration;
       }
       notificationMessage = 'Time for a break!';
+      nextIsWorkTime = false;
     } else {
       // Break time just ended
       nextDuration = workDuration;
       setCycleCount(prev => prev + 1);
       notificationMessage = 'Back to work!';
+      nextIsWorkTime = true;
     }
 
     setMinutes(nextDuration);
-    setIsWorkTime(!isWorkTime);
+    setIsWorkTime(nextIsWorkTime);
     setSeconds(0);
+    setIsActive(true); // Auto-start the next timer after skip
     
     // Notify parent component of work time change
     if (onWorkTimeChange) {
-      onWorkTimeChange(!isWorkTime);
+      onWorkTimeChange(nextIsWorkTime);
+    }
+
+    // Notify parent component of timer active change
+    if (onTimerActiveChange) {
+      onTimerActiveChange(true);
     }
 
     // Request notification permission
     if (Notification.permission !== 'granted') {
       Notification.requestPermission().then(permission => {
         if (permission === 'granted') {
-          new Notification('Timer Finished!', {
+          new Notification('Timer Skipped!', {
             body: notificationMessage
           });
         }
       });
     } else {
-      new Notification('Timer Finished!', {
+      new Notification('Timer Skipped!', {
         body: notificationMessage
       });
     }

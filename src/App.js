@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import PomodoroTimer from './PomodoroTimer';
 import YouTubePlayer from './YouTubePlayer';
 import { Container, CssBaseline, Box, createTheme, ThemeProvider, useMediaQuery, IconButton } from '@mui/material';
@@ -8,6 +8,8 @@ import Brightness7Icon from '@mui/icons-material/Brightness7';
 function App() {
   const [videoId, setVideoId] = useState('');
   const [isWorkTime, setIsWorkTime] = useState(true);
+  const [isTimerActive, setIsTimerActive] = useState(false);
+  const playerRef = useRef(null);
   const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
   const [darkMode, setDarkMode] = useState(prefersDarkMode);
 
@@ -38,6 +40,74 @@ function App() {
     setIsWorkTime(isWorkTime);
   }, []);
 
+  const handleTimerActiveChange = useCallback((isActive) => {
+    setIsTimerActive(isActive);
+  }, []);
+
+  // Control video playback based on timer state
+  useEffect(() => {
+    // Skip video control in test environment
+    if (process.env.NODE_ENV === 'test') {
+      return;
+    }
+
+    if (playerRef.current) {
+      const shouldPlay = isWorkTime && isTimerActive;
+      if (shouldPlay) {
+        playerRef.current.playVideo();
+      } else {
+        playerRef.current.pauseVideo();
+      }
+    }
+  }, [isWorkTime, isTimerActive]);
+
+  // Load YouTube IFrame API
+  useEffect(() => {
+    // Skip loading API in test environment
+    if (process.env.NODE_ENV === 'test') {
+      return;
+    }
+
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    const firstScriptTag = document.getElementsByTagName('script')[0];
+    if (firstScriptTag && firstScriptTag.parentNode) {
+      firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+    } else {
+      document.head.appendChild(tag);
+    }
+
+    window.onYouTubeIframeAPIReady = () => {
+      // API ready, player will be created when videoId changes
+    };
+  }, []);
+
+  // Create/update player when videoId changes
+  useEffect(() => {
+    // Skip player creation in test environment
+    if (process.env.NODE_ENV === 'test') {
+      return;
+    }
+
+    if (videoId && window.YT && window.YT.Player) {
+      if (!playerRef.current) {
+        playerRef.current = new window.YT.Player('youtube-player', {
+          videoId: videoId,
+          events: {
+            onReady: (event) => {
+              // Video ready, initial state is paused
+              event.target.pauseVideo();
+            }
+          }
+        });
+      } else {
+        // Update video if different
+        playerRef.current.loadVideoById(videoId);
+        playerRef.current.pauseVideo();
+      }
+    }
+  }, [videoId]);
+
   return (
     <ThemeProvider theme={theme}>
       <Container maxWidth="sm">
@@ -65,19 +135,16 @@ function App() {
           >
             {darkMode ? <Brightness7Icon /> : <Brightness4Icon />}
           </IconButton>
-          <PomodoroTimer onWorkTimeChange={handleWorkTimeChange} />
+          <PomodoroTimer 
+            onWorkTimeChange={handleWorkTimeChange}
+            onTimerActiveChange={handleTimerActiveChange}
+          />
           <YouTubePlayer onVideoChange={setVideoId} />
           {videoId && (
             <Box sx={{ mt: 4, borderRadius: 2, overflow: 'hidden' }}>
-              <iframe
-                width="100%"
-                height="315"
-                src={`https://www.youtube.com/embed/${videoId}?${isWorkTime ? 'autoplay=1' : 'autoplay=0'}`}
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                title="YouTube video player"
-                key={`${videoId}-${isWorkTime}`}
+              <div
+                id="youtube-player"
+                style={{ width: '100%', height: '315px' }}
               />
             </Box>
           )}
