@@ -1,0 +1,39 @@
+name: Lint and Format Check
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run ESLint
+      run: |
+        if [ -f ".eslintrc.js" ] || [ -f ".eslintrc.json" ] || grep -q "eslintConfig" package.json; then
+          npx eslint src/ --ext .js,.jsx,.ts,.tsx --format=github || true
+        else
+          echo "ESLint not configured"
+        fi
+
+    - name: Check Prettier formatting
+      run: |
+        if [ -f ".prettierrc" ] || [ -f ".prettierrc.json" ] || grep -q "prettier" package.json; then
+          npx prettier --check "src/**/*.{js,jsx,ts,tsx,json,css,md}" || true
+        else
+          echo "Prettier not configured"
+        fi
