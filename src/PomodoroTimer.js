@@ -156,7 +156,7 @@ const PomodoroTimer = ({ onWorkTimeChange, onTimerActiveChange, themeToggle }) =
   const totalPhaseSeconds = currentPhaseDuration * 60;
   const remainingSeconds = minutes * 60 + seconds;
   const hasProgress = remainingSeconds !== totalPhaseSeconds;
-  const phaseLabel = isWorkTime ? 'Work Time' : currentPhaseType === 'longBreak' ? 'Long Break' : 'Break Time';
+  const phaseLabel = isWorkTime ? 'Time to work' : 'Time to rest';
 
   const notifyUser = useCallback((title, body) => {
     if (typeof window === 'undefined' || !('Notification' in window)) {
@@ -343,7 +343,7 @@ const PomodoroTimer = ({ onWorkTimeChange, onTimerActiveChange, themeToggle }) =
       : normalizedCompletedCycles;
 
     return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5 }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: { xs: 'flex-start', sm: 'flex-end' }, gap: 0.5 }}>
         <Typography variant="caption" color="text.secondary">
           Cicli
         </Typography>
@@ -389,21 +389,30 @@ const PomodoroTimer = ({ onWorkTimeChange, onTimerActiveChange, themeToggle }) =
               sx={{
                 width: '100%',
                 display: 'flex',
-                flexWrap: 'wrap',
+                flexDirection: { xs: 'column', sm: 'row' },
                 justifyContent: 'space-between',
-                gap: 2,
-                alignItems: { xs: 'flex-start', sm: 'center' }
+                gap: { xs: 1, sm: 2 },
+                alignItems: { xs: 'stretch', sm: 'center' }
               }}
             >
-              <Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2 }}>
                 <Typography variant="subtitle2" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
                   Configurazione
                 </Typography>
-                <Typography variant="body2" color="text.primary">
-                  {`${workDuration}′ lavoro · ${breakDuration}′ pausa · ${longBreakDuration}′ lunga`}
-                </Typography>
+                <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+                  <Typography variant="body2" color="text.primary">
+                    {`${workDuration}′ lavoro · ${breakDuration}′ pausa · ${longBreakDuration}′ lunga`}
+                  </Typography>
+                </Box>
               </Box>
-              {renderCycleProgress()}
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2 }}>
+                <Box sx={{ display: { xs: 'block', sm: 'none' } }}>
+                  <Typography variant="body2" color="text.primary">
+                    {`${workDuration}′ lavoro · ${breakDuration}′ pausa · ${longBreakDuration}′ lunga`}
+                  </Typography>
+                </Box>
+                {renderCycleProgress()}
+              </Box>
             </Box>
           </AccordionSummary>
           <AccordionDetails>
@@ -467,7 +476,7 @@ const PomodoroTimer = ({ onWorkTimeChange, onTimerActiveChange, themeToggle }) =
           mt: 4
         }}
       >
-        <Box sx={{ flex: 1, width: '100%', textAlign: 'center' }}>
+        <Box sx={{ flex: 1, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <Chip
             label={phaseLabel}
             color={isWorkTime ? 'primary' : 'secondary'}

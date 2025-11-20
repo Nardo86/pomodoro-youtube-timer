@@ -3,7 +3,7 @@ import App from './App';
 
 test('renders pomodoro timer', () => {
   render(<App />);
-  const timerElement = screen.getByText(/work time/i);
+  const timerElement = screen.getByText(/time to work/i);
   expect(timerElement).toBeInTheDocument();
 });
 
