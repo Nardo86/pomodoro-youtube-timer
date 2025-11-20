@@ -194,13 +194,13 @@ const PomodoroTimer = ({ onWorkTimeChange, onTimerActiveChange, onPhaseComplete,
               const completedCycles = cycleCount + 1;
               const reachedLongBreak = completedCycles >= normalizedCycleTarget;
               nextDuration = reachedLongBreak ? longBreakDuration : breakDuration;
-              notificationMessage = 'Time for a break!';
+              notificationMessage = 'Time to rest';
               nextIsWorkTime = false;
               nextPhaseTypeValue = reachedLongBreak ? 'longBreak' : 'break';
               nextCycleCount = completedCycles;
             } else {
               nextDuration = workDuration;
-              notificationMessage = 'Back to work!';
+              notificationMessage = 'Time to work';
               nextIsWorkTime = true;
               nextPhaseTypeValue = 'work';
               if (currentPhaseType === 'longBreak') {
@@ -228,7 +228,7 @@ const PomodoroTimer = ({ onWorkTimeChange, onTimerActiveChange, onPhaseComplete,
               onPhaseComplete(nextPhaseTypeValue);
             }
 
-            notifyUser('Timer Finished!', notificationMessage);
+            notifyUser('Pomodoro Timer', notificationMessage);
           } else {
             setMinutes(minutes - 1);
             setSeconds(59);
@@ -275,7 +275,6 @@ const PomodoroTimer = ({ onWorkTimeChange, onTimerActiveChange, onPhaseComplete,
 
   const skipTimer = () => {
     let nextDuration;
-    let notificationMessage;
     let nextIsWorkTime;
     let nextPhaseTypeValue;
     let nextCycleCount = cycleCount;
@@ -284,13 +283,11 @@ const PomodoroTimer = ({ onWorkTimeChange, onTimerActiveChange, onPhaseComplete,
       const completedCycles = cycleCount + 1;
       const reachedLongBreak = completedCycles >= normalizedCycleTarget;
       nextDuration = reachedLongBreak ? longBreakDuration : breakDuration;
-      notificationMessage = 'Time for a break!';
       nextIsWorkTime = false;
       nextPhaseTypeValue = reachedLongBreak ? 'longBreak' : 'break';
       nextCycleCount = completedCycles;
     } else {
       nextDuration = workDuration;
-      notificationMessage = 'Back to work!';
       nextIsWorkTime = true;
       nextPhaseTypeValue = 'work';
       if (currentPhaseType === 'longBreak') {
@@ -313,8 +310,6 @@ const PomodoroTimer = ({ onWorkTimeChange, onTimerActiveChange, onPhaseComplete,
     if (onTimerActiveChange) {
       onTimerActiveChange(true);
     }
-
-    notifyUser('Timer Skipped!', notificationMessage);
   };
 
   const applySettings = () => {
