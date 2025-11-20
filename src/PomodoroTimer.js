@@ -115,7 +115,7 @@ const AnalogClock = ({ remainingSeconds, totalSeconds }) => {
   );
 };
 
-const PomodoroTimer = ({ onWorkTimeChange, onTimerActiveChange, themeToggle }) => {
+const PomodoroTimer = ({ onWorkTimeChange, onTimerActiveChange, onPhaseComplete, themeToggle }) => {
   const theme = useTheme();
 
   const loadSettings = () => {
@@ -223,6 +223,11 @@ const PomodoroTimer = ({ onWorkTimeChange, onTimerActiveChange, themeToggle }) =
               onTimerActiveChange(false);
             }
 
+            // Invoke phase complete callback before notification
+            if (onPhaseComplete) {
+              onPhaseComplete(nextPhaseTypeValue);
+            }
+
             notifyUser('Timer Finished!', notificationMessage);
           } else {
             setMinutes(minutes - 1);
@@ -239,7 +244,7 @@ const PomodoroTimer = ({ onWorkTimeChange, onTimerActiveChange, themeToggle }) =
         clearInterval(interval);
       }
     };
-  }, [isActive, seconds, minutes, isWorkTime, workDuration, breakDuration, longBreakDuration, cycleCount, normalizedCycleTarget, currentPhaseType, onWorkTimeChange, onTimerActiveChange, notifyUser]);
+  }, [isActive, seconds, minutes, isWorkTime, workDuration, breakDuration, longBreakDuration, cycleCount, normalizedCycleTarget, currentPhaseType, onWorkTimeChange, onTimerActiveChange, onPhaseComplete, notifyUser]);
 
   useEffect(() => {
     if (onTimerActiveChange) {
