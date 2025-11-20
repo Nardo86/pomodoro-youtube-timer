@@ -183,6 +183,14 @@ build/
 - **Manual Toggle**: User-controlled theme switching
 - **Persistent Choice**: Theme preference saved to localStorage
 
+### Bell Chime System
+- **Phase Completion**: Bell sound plays when timer naturally reaches zero
+- **Video Pause**: YouTube video is paused before bell sound plays
+- **Sequence**: Video pause → Bell chime → Notification → Next phase
+- **Audio Context**: Uses Web Audio API for cross-browser compatibility
+- **Test Safety**: Audio and video controls are disabled in test environment
+- **Error Handling**: Graceful fallback if audio playback is blocked by browser
+
 ## 🔍 Debugging
 
 ### Development Tools
@@ -254,6 +262,37 @@ REACT_APP_ENVIRONMENT=production
 - Version bump if required
 
 ## 🔧 Troubleshooting
+
+### Testing Bell Chime Feature
+
+To verify the bell chime feature works correctly:
+
+1. **Setup**:
+   - Start the development server: `npm start`
+   - Load a YouTube video in the player
+   - Set a short timer (e.g., 1 minute work duration)
+
+2. **Verification Steps**:
+   - Start the timer with video playing
+   - When timer reaches zero naturally (not skipped/reset):
+     - YouTube video should pause immediately
+     - Bell chime should play once (800Hz beep, 0.3 seconds)
+     - Browser notification should appear with correct text
+     - Timer should transition to next phase (break or work)
+
+3. **Expected Sequence**:
+   ```
+   Timer reaches 0:00 → Video pauses → Bell plays → Notification shows → Next phase starts
+   ```
+
+4. **Test Environment**:
+   - In test mode (`NODE_ENV === 'test`), audio and video controls are disabled
+   - Manual testing required for audio/video functionality
+
+5. **Troubleshooting**:
+   - If bell doesn't play: Check browser audio permissions and autoplay policies
+   - If video doesn't pause: Check YouTube API loading and player instance
+   - Console warnings for audio errors are expected and handled gracefully
 
 ### Common Development Issues
 

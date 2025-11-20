@@ -10,6 +10,7 @@ function App() {
   const [isWorkTime, setIsWorkTime] = useState(true);
   const [isTimerActive, setIsTimerActive] = useState(false);
   const playerRef = useRef(null);
+  const audioRef = useRef(null);
   const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
   const [darkMode, setDarkMode] = useState(prefersDarkMode);
 
@@ -61,6 +62,67 @@ function App() {
 
   const handleTimerActiveChange = useCallback((isActive) => {
     setIsTimerActive(isActive);
+  }, []);
+
+  const handlePhaseComplete = useCallback((nextPhaseType) => {
+    // Skip in test environment
+    if (process.env.NODE_ENV === 'test') {
+      return;
+    }
+
+    // Pause YouTube video if player exists
+    if (playerRef.current && playerRef.current.pauseVideo) {
+      playerRef.current.pauseVideo();
+    }
+
+    // Play bell sound if audio ref exists
+    if (audioRef.current && audioRef.current.play) {
+      try {
+        audioRef.current.play();
+      } catch (error) {
+        // Handle audio playback errors (e.g., browser blocked autoplay)
+        console.warn('Could not play bell sound:', error);
+      }
+    }
+  }, []);
+
+  // Initialize bell audio
+  useEffect(() => {
+    // Skip audio setup in test environment
+    if (process.env.NODE_ENV === 'test') {
+      return;
+    }
+
+    // Create a simple beep sound as placeholder for bell
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.frequency.value = 800; // 800 Hz tone
+    oscillator.type = 'sine';
+    
+    // Create a short beep (0.3 seconds)
+    const startBeep = () => {
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      
+      osc.connect(gain);
+      gain.connect(audioContext.destination);
+      
+      osc.frequency.value = 800;
+      osc.type = 'sine';
+      
+      gain.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+      
+      osc.start(audioContext.currentTime);
+      osc.stop(audioContext.currentTime + 0.3);
+    };
+
+    audioRef.current = { play: startBeep };
   }, []);
 
   // Control video playback based on timer state
@@ -146,6 +208,7 @@ function App() {
           <PomodoroTimer
             onWorkTimeChange={handleWorkTimeChange}
             onTimerActiveChange={handleTimerActiveChange}
+            onPhaseComplete={handlePhaseComplete}
             themeToggle={themeToggleButton}
           />
           <YouTubePlayer onVideoChange={setVideoId} />
