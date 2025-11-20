@@ -7,11 +7,29 @@ import Brightness7Icon from '@mui/icons-material/Brightness7';
 
 function App() {
   const [videoId, setVideoId] = useState('');
+  const [initialVideoData, setInitialVideoData] = useState(null);
   const [isWorkTime, setIsWorkTime] = useState(true);
   const [isTimerActive, setIsTimerActive] = useState(false);
   const playerRef = useRef(null);
   const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
   const [darkMode, setDarkMode] = useState(prefersDarkMode);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'test') {
+      const savedVideo = localStorage.getItem('pomodoroLastVideo');
+      if (savedVideo) {
+        try {
+          const videoData = JSON.parse(savedVideo);
+          if (videoData.videoId) {
+            setVideoId(videoData.videoId);
+            setInitialVideoData(videoData);
+          }
+        } catch (e) {
+          console.error('Failed to load saved video:', e);
+        }
+      }
+    }
+  }, []);
 
   useEffect(() => {
     setDarkMode(prefersDarkMode);
@@ -148,7 +166,7 @@ function App() {
             onTimerActiveChange={handleTimerActiveChange}
             themeToggle={themeToggleButton}
           />
-          <YouTubePlayer onVideoChange={setVideoId} />
+          <YouTubePlayer onVideoChange={setVideoId} initialVideoData={initialVideoData} />
           {videoId && (
             <Box sx={{ mt: 2, borderRadius: 2, overflow: 'hidden' }}>
               <div id="youtube-player" style={{ width: '100%', height: '315px' }} />

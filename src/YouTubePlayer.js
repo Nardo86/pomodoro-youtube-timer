@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   TextField,
   Box,
@@ -8,10 +8,17 @@ import {
 } from '@mui/material';
 import YouTubeIcon from '@mui/icons-material/YouTube';
 
-const YouTubePlayer = ({ onVideoChange }) => {
+const YouTubePlayer = ({ onVideoChange, initialVideoData }) => {
   const [videoUrl, setVideoUrl] = useState('');
   const [error, setError] = useState('');
   const [hasValidVideo, setHasValidVideo] = useState(false);
+
+  useEffect(() => {
+    if (initialVideoData) {
+      setVideoUrl(initialVideoData.url || '');
+      setHasValidVideo(true);
+    }
+  }, [initialVideoData]);
 
   const handleSubmit = (event) => {
     if (event) {
@@ -23,6 +30,14 @@ const YouTubePlayer = ({ onVideoChange }) => {
       onVideoChange(videoId);
       setError('');
       setHasValidVideo(true);
+
+      if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'test') {
+        const videoData = {
+          videoId: videoId,
+          url: videoUrl
+        };
+        localStorage.setItem('pomodoroLastVideo', JSON.stringify(videoData));
+      }
     } else {
       setError('URL o ID YouTube non valido. Inserisci un URL completo o un ID video di 11 caratteri.');
     }

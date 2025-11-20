@@ -167,14 +167,26 @@ const PomodoroTimer = ({ onWorkTimeChange, onTimerActiveChange, themeToggle }) =
 
     if (NotificationAPI.permission === 'granted') {
       new NotificationAPI(title, { body });
-    } else if (NotificationAPI.permission !== 'denied') {
-      NotificationAPI.requestPermission().then((permission) => {
-        if (permission === 'granted') {
-          new NotificationAPI(title, { body });
-        }
-      });
     }
   }, []);
+
+  useEffect(() => {
+    if (!isActive) return;
+
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      return;
+    }
+
+    const NotificationAPI = window.Notification;
+    const permissionKey = 'pomodoroNotificationRequested';
+    const alreadyRequested = localStorage.getItem(permissionKey);
+
+    if (NotificationAPI.permission === 'default' && !alreadyRequested) {
+      NotificationAPI.requestPermission().then(() => {
+        localStorage.setItem(permissionKey, 'true');
+      });
+    }
+  }, [isActive]);
 
   useEffect(() => {
     let interval = null;
@@ -194,19 +206,19 @@ const PomodoroTimer = ({ onWorkTimeChange, onTimerActiveChange, themeToggle }) =
               const completedCycles = cycleCount + 1;
               const reachedLongBreak = completedCycles >= normalizedCycleTarget;
               nextDuration = reachedLongBreak ? longBreakDuration : breakDuration;
-              notificationMessage = 'Time for a break!';
               nextIsWorkTime = false;
               nextPhaseTypeValue = reachedLongBreak ? 'longBreak' : 'break';
               nextCycleCount = completedCycles;
             } else {
               nextDuration = workDuration;
-              notificationMessage = 'Back to work!';
               nextIsWorkTime = true;
               nextPhaseTypeValue = 'work';
               if (currentPhaseType === 'longBreak') {
                 nextCycleCount = 0;
               }
             }
+
+            notificationMessage = nextIsWorkTime ? 'Time to work' : 'Time to rest';
 
             setCycleCount(nextCycleCount);
             setMinutes(nextDuration);
@@ -223,7 +235,7 @@ const PomodoroTimer = ({ onWorkTimeChange, onTimerActiveChange, themeToggle }) =
               onTimerActiveChange(false);
             }
 
-            notifyUser('Timer Finished!', notificationMessage);
+            notifyUser('Pomodoro Timer', notificationMessage);
           } else {
             setMinutes(minutes - 1);
             setSeconds(59);
