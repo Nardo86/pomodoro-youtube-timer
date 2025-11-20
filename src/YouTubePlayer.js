@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   TextField,
   Box,
@@ -9,26 +9,16 @@ import {
 import YouTubeIcon from '@mui/icons-material/YouTube';
 
 const YouTubePlayer = ({ onVideoChange }) => {
-  const [videoUrl, setVideoUrl] = useState('');
+  const [videoUrl, setVideoUrl] = useState(() => {
+    const saved = localStorage.getItem('lastVideoUrl');
+    return saved || '';
+  });
   const [error, setError] = useState('');
-  const [hasValidVideo, setHasValidVideo] = useState(false);
+  const [hasValidVideo, setHasValidVideo] = useState(() => {
+    return !!localStorage.getItem('lastVideoUrl');
+  });
 
-  const handleSubmit = (event) => {
-    if (event) {
-      event.preventDefault();
-    }
-
-    const videoId = extractVideoId(videoUrl);
-    if (videoId) {
-      onVideoChange(videoId);
-      setError('');
-      setHasValidVideo(true);
-    } else {
-      setError('URL o ID YouTube non valido. Inserisci un URL completo o un ID video di 11 caratteri.');
-    }
-  };
-
-  const extractVideoId = (input) => {
+  const extractVideoId = useCallback((input) => {
     // Try to extract from URL first
     const urlRegExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
     const urlMatch = input.match(urlRegExp);
@@ -43,6 +33,33 @@ const YouTubePlayer = ({ onVideoChange }) => {
     }
     
     return null;
+  }, []);
+
+  // Load saved video on component mount
+  useEffect(() => {
+    const savedUrl = localStorage.getItem('lastVideoUrl');
+    if (savedUrl) {
+      const videoId = extractVideoId(savedUrl);
+      if (videoId) {
+        onVideoChange(videoId);
+      }
+    }
+  }, [onVideoChange, extractVideoId]);
+
+  const handleSubmit = (event) => {
+    if (event) {
+      event.preventDefault();
+    }
+
+    const videoId = extractVideoId(videoUrl);
+    if (videoId) {
+      onVideoChange(videoId);
+      setError('');
+      setHasValidVideo(true);
+      localStorage.setItem('lastVideoUrl', videoUrl);
+    } else {
+      setError('URL o ID YouTube non valido. Inserisci un URL completo o un ID video di 11 caratteri.');
+    }
   };
 
   return (

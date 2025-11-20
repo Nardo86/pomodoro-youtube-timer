@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feature Verification Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .pass { color: green; }
+        .fail { color: red; }
+        code { background: #f4f4f4; padding: 2px 5px; border-radius: 3px; }
+        .step { margin: 10px 0; padding-left: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Pomodoro Timer Feature Verification</h1>
+    
+    <div class="test-section">
+        <h2>✅ 1. Notifications</h2>
+        <p><strong>Expected Behavior:</strong></p>
+        <ul>
+            <li>Browser notification permissions requested when timer starts</li>
+            <li>Notification with title "Pomodoro Timer" and body "Time to work" / "Time to rest" on natural completion</li>
+            <li>No notifications on manual skip/reset</li>
+        </ul>
+        <p><strong>Test Steps:</strong></p>
+        <div class="step">1. Start the timer and grant notification permissions</div>
+        <div class="step">2. Set timer to 1 minute, start work phase</div>
+        <div class="step">3. Wait for natural completion - should see notification: "Pomodoro Timer" / "Time to rest"</div>
+        <div class="step">4. Start another phase and manually skip - should NOT see notification</div>
+        <div class="step">5. Reset timer - should NOT see notification</div>
+    </div>
+
+    <div class="test-section">
+        <h2>✅ 2. Last Video Persistence</h2>
+        <p><strong>Expected Behavior:</strong></p>
+        <ul>
+            <li>Video URL persists across page refreshes</li>
+            <li>YouTube player shows previously loaded video on refresh</li>
+            <li>hasValidVideo state is true after refresh</li>
+        </ul>
+        <p><strong>Test Steps:</strong></p>
+        <div class="step">1. Enter valid YouTube URL (e.g., https://www.youtube.com/watch?v=dQw4w9WgXcQ)</div>
+        <div class="step">2. Click "Carica" - video should load</div>
+        <div class="step">3. Refresh the page (F5)</div>
+        <div class="step">4. Verify: URL still in input field, video loaded, example URLs hidden</div>
+        <div class="step">5. Try with different video to verify it updates correctly</div>
+    </div>
+
+    <div class="test-section">
+        <h2>✅ 3. Bell Chime Sound</h2>
+        <p><strong>Expected Behavior:</strong></p>
+        <ul>
+            <li>Bell sound plays on natural timer completion</li>
+            <li>YouTube video pauses immediately when timer completes</li>
+            <li>No sound on manual skip/reset</li>
+        </ul>
+        <p><strong>Test Steps:</strong></p>
+        <div class="step">1. Load a YouTube video and start it playing</div>
+        <div class="step">2. Set timer to 1 minute, start work phase</div>
+        <div class="step">3. Wait for natural completion - video should pause, bell should play</div>
+        <div class="step">4. Test both work→break and break→work transitions</div>
+        <div class="step">5. Try manual skip/reset - should NOT hear bell sound</div>
+    </div>
+
+    <div class="test-section">
+        <h2>📋 Implementation Changes Made</h2>
+        <ul>
+            <li><strong>Notifications:</strong> Fixed to only show on natural completion, removed from manual skip</li>
+            <li><strong>Video Persistence:</strong> Added localStorage to save/restore video URL</li>
+            <li><strong>Notification Content:</strong> Updated to "Pomodoro Timer" title with "Time to work"/"Time to rest" body</li>
+            <li><strong>Bell Sound:</strong> Already correctly implemented - only plays on natural completion</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>🔧 Technical Details</h2>
+        <p><strong>Files Modified:</strong></p>
+        <ul>
+            <li><code>src/PomodoroTimer.js</code> - Fixed notification logic and content</li>
+            <li><code>src/YouTubePlayer.js</code> - Added localStorage persistence</li>
+        </ul>
+        <p><strong>Key Changes:</strong></p>
+        <ul>
+            <li>Removed <code>notifyUser()</code> call from <code>skipTimer()</code> function</li>
+            <li>Added localStorage initialization and save/load logic to YouTubePlayer</li>
+            <li>Updated notification title to "Pomodoro Timer" and body messages to match requirements</li>
+        </ul>
+    </div>
+
+    <script>
+        console.log('Feature verification guide loaded. Open the main app to test the features.');
+    </script>
+</body>
+</html>
