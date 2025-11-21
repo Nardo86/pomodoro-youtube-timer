@@ -8,7 +8,7 @@
 **Result**: Notifications now only fire on natural countdown completion
 
 **Updated Content**:
-- Title: "Pomodoro Timer" (was "Timer Finished!")
+- Title: "Pomodoro YouTube Timer" (was "Timer Finished!")
 - Body: "Time to work" for work phases, "Time to rest" for break phases
 
 ### 2. Video Persistence Implementation
@@ -32,7 +32,7 @@
 ### Files Modified:
 1. **src/PomodoroTimer.js**
    - Removed `notifyUser()` call from `skipTimer()` function
-   - Updated notification title to "Pomodoro Timer"
+   - Updated notification title to "Pomodoro YouTube Timer"
    - Updated notification body messages to match requirements
    - Removed unused `notificationMessage` variable
 

@@ -1,13 +1,13 @@
 #!/bin/bash
 
-# 🚀 Pomodoro Timer - Nginx Deployment Script
+# 🚀 Pomodoro YouTube Timer - Nginx Deployment Script
 # This script deploys the built application to nginx
 
 set -e
 
 # Configuration
 NGINX_ROOT="/var/www/html"
-BACKUP_DIR="/var/backups/pomodoro-timer"
+BACKUP_DIR="/var/backups/pomodoro-youtube-timer"
 SERVICE_NAME="nginx"
 
 # Colors for output
