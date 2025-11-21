@@ -32,7 +32,7 @@ npx serve -s build
 4. **Deploy to nginx**:
    ```bash
    # Extract the deployment package
-   tar -xzf pomodoro-timer-nginx-*.tar.gz -C /var/www/html/
+   tar -xzf pomodoro-youtube-timer-nginx-*.tar.gz -C /var/www/html/
    
    # Set permissions
    sudo chown -R www-data:www-data /var/www/html/
@@ -69,7 +69,7 @@ sudo systemctl reload nginx
 
 ## 🌐 Access Your App
 
-After deployment, access your Pomodoro Timer at:
+After deployment, access your Pomodoro YouTube Timer at:
 - Local: `http://localhost:3000`
 - Production: `http://your-domain.com`
 

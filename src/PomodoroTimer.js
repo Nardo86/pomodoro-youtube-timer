@@ -228,7 +228,7 @@ const PomodoroTimer = ({ onWorkTimeChange, onTimerActiveChange, onPhaseComplete,
               onPhaseComplete(nextPhaseTypeValue);
             }
 
-            notifyUser('Pomodoro Timer', notificationMessage);
+            notifyUser('Pomodoro YouTube Timer', notificationMessage);
           } else {
             setMinutes(minutes - 1);
             setSeconds(59);

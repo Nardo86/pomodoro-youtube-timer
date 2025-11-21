@@ -1,6 +1,6 @@
 {
-  "short_name": "Pomodoro Timer",
-  "name": "Pomodoro Timer with YouTube",
+  "short_name": "Pomodoro YouTube Timer",
+  "name": "Pomodoro YouTube Timer",
   "icons": [
     {
       "src": "favicon.ico",
@@ -22,12 +22,12 @@
   "display": "standalone",
   "theme_color": "#000000",
   "background_color": "#ffffff",
-  "description": "A Pomodoro timer with YouTube integration for focused work sessions",
+  "description": "A Pomodoro YouTube timer for focused work sessions with video integration",
   "shortcuts": [
     {
       "name": "Start Timer",
       "short_name": "Start",
-      "description": "Start the Pomodoro timer",
+      "description": "Start the Pomodoro YouTube timer",
       "url": "/",
       "icons": [{ "src": "favicon.ico", "sizes": "16x16" }]
     }

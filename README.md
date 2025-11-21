@@ -1,4 +1,4 @@
-# Pomodoro Timer with YouTube Integration
+# Pomodoro YouTube Timer
 
 A productivity application that combines the Pomodoro technique with YouTube video playback for focused work sessions.
 
@@ -74,7 +74,7 @@ This project includes automated GitHub Actions for building and deployment:
 
 1. Push to `main`/`master` branch
 2. Download the `nginx-deployment-package` from Actions
-3. Extract to nginx directory: `tar -xzf pomodoro-timer-nginx-*.tar.gz -C /var/www/html/`
+3. Extract to nginx directory: `tar -xzf pomodoro-youtube-timer-nginx-*.tar.gz -C /var/www/html/`
 4. Reload nginx: `sudo systemctl reload nginx`
 
 📖 **See [DEPLOYMENT.md](DEPLOYMENT.md) for complete deployment guide**

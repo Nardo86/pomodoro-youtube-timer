@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import App from './App';
 
-test('renders pomodoro timer', () => {
+test('renders pomodoro youtube timer', () => {
   render(<App />);
   const timerElement = screen.getByText(/time to work/i);
   expect(timerElement).toBeInTheDocument();
