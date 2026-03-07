@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   TextField,
   Box,
@@ -17,7 +17,8 @@ import {
   DialogContent,
   DialogActions,
   Alert,
-  Tooltip
+  Tooltip,
+  CircularProgress
 } from '@mui/material';
 import YouTubeIcon from '@mui/icons-material/YouTube';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
@@ -38,6 +39,26 @@ import {
   importBookmarksFromCSV
 } from './bookmarkUtils';
 
+// Helper function to extract video ID
+const extractVideoIdHelper = (input) => {
+  if (!input) return null;
+  
+  // Try to extract from URL first
+  const urlRegExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+  const urlMatch = input.match(urlRegExp);
+  if (urlMatch && urlMatch[2].length === 11) {
+    return urlMatch[2];
+  }
+  
+  // If not a URL, check if it's a direct video ID (11 characters)
+  const idRegExp = /^[a-zA-Z0-9_-]{11}$/;
+  if (idRegExp.test(input.trim())) {
+    return input.trim();
+  }
+  
+  return null;
+};
+
 const YouTubePlayer = ({ onVideoChange }) => {
   const [videoUrl, setVideoUrl] = useState(() => {
     const saved = localStorage.getItem('lastVideoUrl');
@@ -45,9 +66,15 @@ const YouTubePlayer = ({ onVideoChange }) => {
   });
   const [error, setError] = useState('');
   const [hasValidVideo, setHasValidVideo] = useState(() => {
-    return !!localStorage.getItem('lastVideoUrl');
+    // Validate the saved URL from localStorage
+    const saved = localStorage.getItem('lastVideoUrl');
+    if (saved) {
+      return extractVideoIdHelper(saved) !== null;
+    }
+    return false;
   });
   const [currentVideoId, setCurrentVideoId] = useState('');
+  const [isPlayerLoading, setIsPlayerLoading] = useState(false);
   
   // Bookmark states
   const [bookmarkPanelOpen, setBookmarkPanelOpen] = useState(false);
@@ -62,7 +89,7 @@ const YouTubePlayer = ({ onVideoChange }) => {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importMode, setImportMode] = useState('merge');
   const [importError, setImportError] = useState('');
-  const fileInputRef = React.useRef(null);
+  const fileInputRef = useRef(null);
 
   // Load bookmarks on component mount
   useEffect(() => {
@@ -87,6 +114,18 @@ const YouTubePlayer = ({ onVideoChange }) => {
       setIsBookmarked(false);
     }
   }, [currentVideoId]);
+
+  // Listen for YouTube player ready event
+  useEffect(() => {
+    const handlePlayerReady = () => {
+      setIsPlayerLoading(false);
+    };
+
+    window.addEventListener('youtube-player-ready', handlePlayerReady);
+    return () => {
+      window.removeEventListener('youtube-player-ready', handlePlayerReady);
+    };
+  }, []);
 
   const loadBookmarks = () => {
     const bookmarkList = getBookmarks();
@@ -181,21 +220,9 @@ const YouTubePlayer = ({ onVideoChange }) => {
       fileInputRef.current.value = '';
     }
   };
+  
   const extractVideoId = useCallback((input) => {
-    // Try to extract from URL first
-    const urlRegExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-    const urlMatch = input.match(urlRegExp);
-    if (urlMatch && urlMatch[2].length === 11) {
-      return urlMatch[2];
-    }
-    
-    // If not a URL, check if it's a direct video ID (11 characters)
-    const idRegExp = /^[a-zA-Z0-9_-]{11}$/;
-    if (idRegExp.test(input.trim())) {
-      return input.trim();
-    }
-    
-    return null;
+    return extractVideoIdHelper(input);
   }, []);
 
   // Load saved video on component mount
@@ -222,10 +249,24 @@ const YouTubePlayer = ({ onVideoChange }) => {
       setError('');
       setHasValidVideo(true);
       localStorage.setItem('lastVideoUrl', videoUrl);
+      setIsPlayerLoading(true);
     } else {
       setError('URL o ID YouTube non valido. Inserisci un URL completo o un ID video di 11 caratteri.');
     }
   };
+
+  // Handle YouTube player ready event from the hook
+  useEffect(() => {
+    const checkPlayerReady = setInterval(() => {
+      const playerElement = document.getElementById('youtube-player');
+      if (playerElement && playerElement.classList.contains('ytp-pause-overlay')) {
+        setIsPlayerLoading(false);
+        clearInterval(checkPlayerReady);
+      }
+    }, 500);
+
+    return () => clearInterval(checkPlayerReady);
+  }, [currentVideoId]);
 
   return (
     <Box sx={{ mt: 2 }}>
@@ -253,6 +294,9 @@ const YouTubePlayer = ({ onVideoChange }) => {
           helperText={error}
           placeholder="https://www.youtube.com/watch?v=... o ID video"
           sx={{ minWidth: 240 }}
+          inputProps={{
+            'aria-describedby': 'youtube-url-helper'
+          }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -275,8 +319,9 @@ const YouTubePlayer = ({ onVideoChange }) => {
             minWidth: 120,
             alignSelf: { xs: 'center', sm: 'auto' }
           }}
+          disabled={isPlayerLoading}
         >
-          Carica
+          {isPlayerLoading ? <CircularProgress size={24} color="inherit" /> : 'Carica'}
         </Button>
         
         {currentVideoId && (
@@ -424,19 +469,24 @@ const YouTubePlayer = ({ onVideoChange }) => {
 
       {/* Add Bookmark Dialog */}
       <Dialog open={addBookmarkDialogOpen} onClose={() => setAddBookmarkDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Aggiungi Segnalibro</DialogTitle>
+        <DialogTitle id="add-bookmark-title">Aggiungi Segnalibro</DialogTitle>
         <DialogContent>
           <TextField
             autoFocus
             fullWidth
             margin="dense"
             label="Descrizione"
+            id="bookmark-description"
             value={bookmarkDescription}
             onChange={(e) => setBookmarkDescription(e.target.value)}
             error={!!bookmarkError}
             helperText={bookmarkError || 'Massimo 200 caratteri, non è consentito il carattere ;'}
             inputProps={{ maxLength: 200 }}
+            aria-describedby="bookmark-description-helper"
           />
+          <Typography variant="caption" color="text.secondary" id="bookmark-description-helper">
+            Massimo 200 caratteri, non è consentito il carattere ;
+          </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setAddBookmarkDialogOpen(false)}>Annulla</Button>
@@ -446,9 +496,9 @@ const YouTubePlayer = ({ onVideoChange }) => {
 
       {/* Delete Bookmark Dialog */}
       <Dialog open={deleteBookmarkDialogOpen} onClose={() => setDeleteBookmarkDialogOpen(false)}>
-        <DialogTitle>Rimuovi Segnalibro</DialogTitle>
+        <DialogTitle id="delete-bookmark-title">Rimuovi Segnalibro</DialogTitle>
         <DialogContent>
-          <Typography>Sei sicuro di voler rimuovere questo segnalibro?</Typography>
+          <Typography id="delete-bookmark-description">Sei sicuro di voler rimuovere questo segnalibro?</Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteBookmarkDialogOpen(false)}>Annulla</Button>
@@ -458,7 +508,7 @@ const YouTubePlayer = ({ onVideoChange }) => {
 
       {/* Import Dialog */}
       <Dialog open={importDialogOpen} onClose={() => setImportDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Importa Segnalibri da CSV</DialogTitle>
+        <DialogTitle id="import-bookmarks-title">Importa Segnalibri da CSV</DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ mb: 2 }}>
             Seleziona un file CSV con le colonne: IDVideo, Description, Views
@@ -496,6 +546,8 @@ const YouTubePlayer = ({ onVideoChange }) => {
             accept=".csv"
             onChange={handleImportBookmarks}
             style={{ display: 'none' }}
+            id="csv-file-input"
+            aria-label="Seleziona file CSV"
           />
           <Button
             variant="outlined"

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Button,
   Typography,
@@ -20,7 +20,7 @@ import PauseRoundedIcon from '@mui/icons-material/PauseRounded';
 import ReplayIcon from '@mui/icons-material/Replay';
 import SkipNextIcon from '@mui/icons-material/SkipNext';
 
-const AnalogClock = ({ remainingSeconds, totalSeconds }) => {
+const AnalogClock = React.memo(({ remainingSeconds, totalSeconds }) => {
   const theme = useTheme();
   const safeTotal = totalSeconds > 0 ? totalSeconds : 1;
   const clampedRemaining = Math.max(0, Math.min(remainingSeconds, safeTotal));
@@ -36,6 +36,11 @@ const AnalogClock = ({ remainingSeconds, totalSeconds }) => {
   const minuteHandTransition = isPhaseReset ? 'none' : 'transform 0.3s ease';
   const secondHandTransition = isPhaseReset ? 'none' : 'transform 0.1s linear';
 
+  // Format time for accessibility
+  const minutesDisplay = Math.floor(clampedRemaining / 60);
+  const secondsDisplay = clampedRemaining % 60;
+  const timeDisplay = `${minutesDisplay}:${secondsDisplay.toString().padStart(2, '0')}`;
+
   return (
     <Box
       sx={{
@@ -45,8 +50,13 @@ const AnalogClock = ({ remainingSeconds, totalSeconds }) => {
         mx: 'auto',
         pointerEvents: 'none'
       }}
-      aria-hidden="true"
+      role="img"
+      aria-label={`Tempo rimanente: ${timeDisplay}`}
+      aria-describedby="timer-description"
     >
+      <span id="timer-description" className="sr-only">
+        Orologio analogico del timer Pomodoro. Tempo rimanente: {minutesDisplay} minuti e {secondsDisplay} secondi
+      </span>
       <Box
         sx={{
           position: 'absolute',
@@ -113,7 +123,9 @@ const AnalogClock = ({ remainingSeconds, totalSeconds }) => {
       />
     </Box>
   );
-};
+});
+
+AnalogClock.displayName = 'AnalogClock';
 
 const PomodoroTimer = ({ onWorkTimeChange, onTimerActiveChange, onPhaseComplete, themeToggle }) => {
   const theme = useTheme();
@@ -152,11 +164,49 @@ const PomodoroTimer = ({ onWorkTimeChange, onTimerActiveChange, onPhaseComplete,
   const [currentPhaseDuration, setCurrentPhaseDuration] = useState(initialSettings.workDuration);
 
   const normalizedCycleTarget = Math.max(1, cyclesBeforeLongBreak || 1);
-  const dividerColor = theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)';
+  
+  // Memoize dividerColor for performance
+  const dividerColor = useMemo(() => {
+    return theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)';
+  }, [theme.palette.mode]);
+  
   const totalPhaseSeconds = currentPhaseDuration * 60;
   const remainingSeconds = minutes * 60 + seconds;
   const hasProgress = remainingSeconds !== totalPhaseSeconds;
-  const phaseLabel = isWorkTime ? 'Time to work' : 'Time to rest';
+  
+  // Memoize phaseLabel for performance
+  const phaseLabel = useMemo(() => {
+    return isWorkTime ? 'Time to work' : 'Time to rest';
+  }, [isWorkTime]);
+
+  // Validation helpers with clamping
+  const clampValue = (value, min, max) => {
+    const num = Number(value);
+    if (isNaN(num)) return min;
+    return Math.max(min, Math.min(max, num));
+  };
+
+  const handleWorkDurationChange = (e) => {
+    setWorkDuration(clampValue(e.target.value, 1, 60));
+  };
+
+  const handleBreakDurationChange = (e) => {
+    setBreakDuration(clampValue(e.target.value, 1, 30));
+  };
+
+  const handleLongBreakDurationChange = (e) => {
+    setLongBreakDuration(clampValue(e.target.value, 5, 60));
+  };
+
+  const handleCyclesBeforeLongBreakChange = (e) => {
+    setCyclesBeforeLongBreak(clampValue(e.target.value, 1, 10));
+  };
+
+  // Validation errors
+  const workDurationError = workDuration < 1 || workDuration > 60;
+  const breakDurationError = breakDuration < 1 || breakDuration > 30;
+  const longBreakDurationError = longBreakDuration < 5 || longBreakDuration > 60;
+  const cyclesError = cyclesBeforeLongBreak < 1 || cyclesBeforeLongBreak > 10;
 
   const notifyUser = useCallback((title, body) => {
     if (typeof window === 'undefined' || !('Notification' in window)) {
@@ -422,17 +472,25 @@ const PomodoroTimer = ({ onWorkTimeChange, onTimerActiveChange, onPhaseComplete,
                   label="Work Duration (min)"
                   type="number"
                   value={workDuration}
-                  onChange={(e) => setWorkDuration(Number(e.target.value))}
+                  onChange={handleWorkDurationChange}
                   inputProps={{ min: 1, max: 60 }}
+                  error={workDurationError}
+                  helperText={workDurationError ? 'Valore tra 1 e 60' : ''}
                   sx={{ flex: 1, minWidth: 140 }}
+                  id="work-duration-input"
+                  aria-describedby="work-duration-helper"
                 />
                 <TextField
                   label="Break Duration (min)"
                   type="number"
                   value={breakDuration}
-                  onChange={(e) => setBreakDuration(Number(e.target.value))}
+                  onChange={handleBreakDurationChange}
                   inputProps={{ min: 1, max: 30 }}
+                  error={breakDurationError}
+                  helperText={breakDurationError ? 'Valore tra 1 e 30' : ''}
                   sx={{ flex: 1, minWidth: 140 }}
+                  id="break-duration-input"
+                  aria-describedby="break-duration-helper"
                 />
               </Box>
               <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
@@ -440,17 +498,25 @@ const PomodoroTimer = ({ onWorkTimeChange, onTimerActiveChange, onPhaseComplete,
                   label="Long Break Duration (min)"
                   type="number"
                   value={longBreakDuration}
-                  onChange={(e) => setLongBreakDuration(Number(e.target.value))}
+                  onChange={handleLongBreakDurationChange}
                   inputProps={{ min: 5, max: 60 }}
+                  error={longBreakDurationError}
+                  helperText={longBreakDurationError ? 'Valore tra 5 e 60' : ''}
                   sx={{ flex: 1, minWidth: 140 }}
+                  id="long-break-duration-input"
+                  aria-describedby="long-break-duration-helper"
                 />
                 <TextField
                   label="Cycles Before Long Break"
                   type="number"
                   value={cyclesBeforeLongBreak}
-                  onChange={(e) => setCyclesBeforeLongBreak(Number(e.target.value))}
+                  onChange={handleCyclesBeforeLongBreakChange}
                   inputProps={{ min: 1, max: 10 }}
+                  error={cyclesError}
+                  helperText={cyclesError ? 'Valore tra 1 e 10' : ''}
                   sx={{ flex: 1, minWidth: 140 }}
+                  id="cycles-input"
+                  aria-describedby="cycles-helper"
                 />
               </Box>
               <Button variant="contained" onClick={applySettings} disabled={isActive} sx={{ mt: 1 }}>
