@@ -56,6 +56,18 @@ npm start
 
 ## 🚀 Deployment
 
+### Option 1 — Pre-built packages (recommended)
+
+Download the latest ready-to-deploy nginx package from the [Releases](https://github.com/Nardo86/pomodoro-youtube-timer/releases) page, or grab the latest build artifact directly from [GitHub Actions](https://github.com/Nardo86/pomodoro-youtube-timer/actions) (`nginx-deployment-package`).
+
+```bash
+tar -xzf pomodoro-timer-nginx-*.tar.gz -C /var/www/html/
+sudo chown -R www-data:www-data /var/www/html/
+sudo systemctl reload nginx
+```
+
+### Option 2 — Build from source
+
 ```bash
 npm run build
 sudo cp -r build/* /var/www/html/
