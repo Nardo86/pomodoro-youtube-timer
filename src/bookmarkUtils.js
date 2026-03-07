@@ -22,14 +22,28 @@ export const getBookmarks = () => {
 };
 
 export const saveBookmarks = (bookmarks) => {
-  if (!isStorageAvailable()) return false;
+  if (!isStorageAvailable()) return { success: false, error: 'Storage not available' };
   
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(bookmarks));
-    return true;
+    return { success: true };
   } catch (error) {
     console.error('Error saving bookmarks:', error);
-    return false;
+    
+    // Handle specific error types
+    if (error.name === 'QuotaExceededError') {
+      return { 
+        success: false, 
+        error: 'Storage quota exceeded. Please remove some bookmarks.',
+        isQuotaError: true
+      };
+    }
+    
+    return { 
+      success: false, 
+      error: `Failed to save bookmarks: ${error.message}`,
+      isQuotaError: false
+    };
   }
 };
 

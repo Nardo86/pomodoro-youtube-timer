@@ -1,6 +1,8 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import PomodoroTimer from './PomodoroTimer';
 import YouTubePlayer from './YouTubePlayer';
+import useBellSound from './hooks/useBellSound';
+import useYouTubePlayer from './hooks/useYouTubePlayer';
 import { Container, CssBaseline, Box, createTheme, ThemeProvider, useMediaQuery, IconButton } from '@mui/material';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
@@ -9,10 +11,12 @@ function App() {
   const [videoId, setVideoId] = useState('');
   const [isWorkTime, setIsWorkTime] = useState(true);
   const [isTimerActive, setIsTimerActive] = useState(false);
-  const playerRef = useRef(null);
-  const audioRef = useRef(null);
   const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
   const [darkMode, setDarkMode] = useState(prefersDarkMode);
+
+  // Use custom hooks
+  const audioRef = useBellSound();
+  const { playVideo, pauseVideo } = useYouTubePlayer(videoId);
 
   useEffect(() => {
     setDarkMode(prefersDarkMode);
@@ -64,66 +68,24 @@ function App() {
     setIsTimerActive(isActive);
   }, []);
 
-  const handlePhaseComplete = useCallback((nextPhaseType) => {
+  const handlePhaseComplete = useCallback(() => {
     // Skip in test environment
     if (process.env.NODE_ENV === 'test') {
       return;
     }
 
-    // Pause YouTube video if player exists
-    if (playerRef.current && playerRef.current.pauseVideo) {
-      playerRef.current.pauseVideo();
-    }
+    // Pause YouTube video
+    pauseVideo();
 
-    // Play bell sound if audio ref exists
-    if (audioRef.current && audioRef.current.play) {
+    // Play bell sound
+    if (audioRef && audioRef.play) {
       try {
-        audioRef.current.play();
+        audioRef.play();
       } catch (error) {
-        // Handle audio playback errors (e.g., browser blocked autoplay)
         console.warn('Could not play bell sound:', error);
       }
     }
-  }, []);
-
-  // Initialize bell audio
-  useEffect(() => {
-    // Skip audio setup in test environment
-    if (process.env.NODE_ENV === 'test') {
-      return;
-    }
-
-    // Create a simple beep sound as placeholder for bell
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    
-    oscillator.frequency.value = 800; // 800 Hz tone
-    oscillator.type = 'sine';
-    
-    // Create a short beep (0.3 seconds)
-    const startBeep = () => {
-      const osc = audioContext.createOscillator();
-      const gain = audioContext.createGain();
-      
-      osc.connect(gain);
-      gain.connect(audioContext.destination);
-      
-      osc.frequency.value = 800;
-      osc.type = 'sine';
-      
-      gain.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-      
-      osc.start(audioContext.currentTime);
-      osc.stop(audioContext.currentTime + 0.3);
-    };
-
-    audioRef.current = { play: startBeep };
-  }, []);
+  }, [pauseVideo, audioRef]);
 
   // Control video playback based on timer state
   useEffect(() => {
@@ -132,62 +94,13 @@ function App() {
       return;
     }
 
-    if (playerRef.current) {
-      const shouldPlay = isWorkTime && isTimerActive;
-      if (shouldPlay) {
-        playerRef.current.playVideo();
-      } else {
-        playerRef.current.pauseVideo();
-      }
-    }
-  }, [isWorkTime, isTimerActive]);
-
-  // Load YouTube IFrame API
-  useEffect(() => {
-    // Skip loading API in test environment
-    if (process.env.NODE_ENV === 'test') {
-      return;
-    }
-
-    const tag = document.createElement('script');
-    tag.src = 'https://www.youtube.com/iframe_api';
-    const firstScriptTag = document.getElementsByTagName('script')[0];
-    if (firstScriptTag && firstScriptTag.parentNode) {
-      firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+    const shouldPlay = isWorkTime && isTimerActive;
+    if (shouldPlay) {
+      playVideo();
     } else {
-      document.head.appendChild(tag);
+      pauseVideo();
     }
-
-    window.onYouTubeIframeAPIReady = () => {
-      // API ready, player will be created when videoId changes
-    };
-  }, []);
-
-  // Create/update player when videoId changes
-  useEffect(() => {
-    // Skip player creation in test environment
-    if (process.env.NODE_ENV === 'test') {
-      return;
-    }
-
-    if (videoId && window.YT && window.YT.Player) {
-      if (!playerRef.current) {
-        playerRef.current = new window.YT.Player('youtube-player', {
-          videoId: videoId,
-          events: {
-            onReady: (event) => {
-              // Video ready, initial state is paused
-              event.target.pauseVideo();
-            }
-          }
-        });
-      } else {
-        // Update video if different
-        playerRef.current.loadVideoById(videoId);
-        playerRef.current.pauseVideo();
-      }
-    }
-  }, [videoId]);
+  }, [isWorkTime, isTimerActive, playVideo, pauseVideo]);
 
   return (
     <ThemeProvider theme={theme}>
