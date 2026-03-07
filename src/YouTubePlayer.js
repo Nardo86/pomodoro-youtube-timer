@@ -178,7 +178,7 @@ const YouTubePlayer = ({ onVideoChange }) => {
     setVideoUrl(videoUrl);
     setHasValidVideo(true);
     localStorage.setItem('lastVideoUrl', videoUrl);
-    onVideoChange(videoId);
+    if (onVideoChange) onVideoChange(videoId);
     setCurrentVideoId(videoId);
   };
 
@@ -233,7 +233,7 @@ const YouTubePlayer = ({ onVideoChange }) => {
       const videoId = extractVideoId(savedUrl);
       if (videoId) {
         setCurrentVideoId(videoId);
-        onVideoChange(videoId);
+        if (onVideoChange) onVideoChange(videoId);
       }
     }
   }, [onVideoChange, extractVideoId]);
@@ -246,7 +246,7 @@ const YouTubePlayer = ({ onVideoChange }) => {
     const videoId = extractVideoId(videoUrl);
     if (videoId) {
       setCurrentVideoId(videoId);
-      onVideoChange(videoId);
+      if (onVideoChange) onVideoChange(videoId);
       setError('');
       setHasValidVideo(true);
       localStorage.setItem('lastVideoUrl', videoUrl);
@@ -376,7 +376,7 @@ const YouTubePlayer = ({ onVideoChange }) => {
               <IconButton onClick={() => setImportDialogOpen(true)}>
                 <FileUploadIcon />
               </IconButton>
-              <IconButton onClick={() => setBookmarkPanelOpen(false)}>
+              <IconButton onClick={() => setBookmarkPanelOpen(false)} aria-label="Close">
                 <CloseIcon />
               </IconButton>
             </Box>

@@ -96,11 +96,11 @@ describe('App', () => {
       render(<App />);
       
       const input = screen.getByLabelText(/youtube url o id video/i);
-      fireEvent.change(input, { target: { value: 'https://www.youtube.com/watch?v=testVideo123' } });
-      
+      fireEvent.change(input, { target: { value: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' } });
+
       const loadButton = screen.getByText(/carica/i);
       fireEvent.click(loadButton);
-      
+
       // YouTube player div should be present
       expect(document.getElementById('youtube-player')).toBeInTheDocument();
     });

@@ -37,7 +37,6 @@ describe('PomodoroTimer', () => {
     store = {};
     localStorageMock.getItem.mockImplementation((key) => store[key] || null);
     localStorageMock.setItem.mockImplementation((key, value) => { store[key] = value; });
-    localStorageMock.getItem.mockReturnValue(null);
     localStorageMock.setItem.mockClear();
     jest.useFakeTimers();
   });
@@ -71,25 +70,25 @@ describe('PomodoroTimer', () => {
   describe('Timer Start/Stop', () => {
     test('starts timer when clicking start button', () => {
       render(<PomodoroTimer />);
-      
+
       const startButton = screen.getByText(/start/i);
       fireEvent.click(startButton);
-      
+
       // Timer should be active now (pause button should appear)
-      expect(screen.queryByLabelText(/pause timer/i)).toBeInTheDocument();
+      expect(screen.queryByLabelText(/pausa timer/i)).toBeInTheDocument();
     });
 
     test('pauses timer when clicking pause button', () => {
       render(<PomodoroTimer />);
-      
+
       // Start the timer first
       const startButton = screen.getByText(/start/i);
       fireEvent.click(startButton);
-      
+
       // Now pause
-      const pauseButton = screen.getByLabelText(/pause timer/i);
+      const pauseButton = screen.getByLabelText(/pausa timer/i);
       fireEvent.click(pauseButton);
-      
+
       // Start button should appear again
       expect(screen.getByText(/start/i)).toBeInTheDocument();
     });
@@ -100,24 +99,33 @@ describe('PomodoroTimer', () => {
       const mockOnWorkTimeChange = jest.fn();
       const mockOnTimerActiveChange = jest.fn();
       const mockOnPhaseComplete = jest.fn();
-      
+
+      // Use 1-minute work duration so we only need 61 ticks
+      store['pomodoroSettings'] = JSON.stringify({
+        workDuration: 1,
+        breakDuration: 5,
+        longBreakDuration: 15,
+        cyclesBeforeLongBreak: 4
+      });
+
       render(
-        <PomodoroTimer 
+        <PomodoroTimer
           onWorkTimeChange={mockOnWorkTimeChange}
           onTimerActiveChange={mockOnTimerActiveChange}
           onPhaseComplete={mockOnPhaseComplete}
         />
       );
-      
+
       // Start the timer
       const startButton = screen.getByText(/start/i);
       fireEvent.click(startButton);
-      
-      // Fast forward to complete the timer (25 minutes)
-      act(() => {
-        jest.advanceTimersByTime(25 * 60 * 1000);
-      });
-      
+
+      // Advance one tick at a time so React re-renders between ticks
+      // 1 min = 60s: 1 tick for 1:00→0:59, 59 ticks for 0:59→0:00, 1 tick to complete = 61
+      for (let i = 0; i < 62; i++) {
+        act(() => { jest.advanceTimersByTime(1000); });
+      }
+
       expect(mockOnPhaseComplete).toHaveBeenCalled();
     });
   });
@@ -239,9 +247,9 @@ describe('PomodoroTimer', () => {
       fireEvent.click(accordion);
       
       // Try to set invalid break duration (over max)
-      const breakInput = screen.getByLabelText(/break duration/i);
+      const breakInput = screen.getByLabelText(/^break duration/i);
       fireEvent.change(breakInput, { target: { value: '100' } });
-      
+
       // Value should be clamped to 30
       expect(breakInput.value).toBe('30');
     });
