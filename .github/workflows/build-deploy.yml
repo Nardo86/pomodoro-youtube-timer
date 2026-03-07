@@ -46,11 +46,13 @@ jobs:
 
     - name: Generate deployment summary
       run: |
+        BUILD_SIZE=$(du -sh build | cut -f1)
+        COMMIT_SHA=$(git rev-parse --short HEAD)
         echo "## 🚀 Build Summary" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "✅ **Build Status**: Success" >> $GITHUB_STEP_SUMMARY
-        echo "📦 **Build Size**: $(du -sh build | cut -f1)" >> $GITHUB_STEP_SUMMARY
-        echo "🔗 **Commit**: $(git rev-parse --short HEAD)" >> $GITHUB_STEP_SUMMARY
+        echo "📦 **Build Size**: ${BUILD_SIZE}" >> $GITHUB_STEP_SUMMARY
+        echo "🔗 **Commit**: ${COMMIT_SHA}" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### 📁 Deployment Package" >> $GITHUB_STEP_SUMMARY
         echo "The deployment package is available in the artifacts section." >> $GITHUB_STEP_SUMMARY

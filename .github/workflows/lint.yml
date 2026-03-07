@@ -24,7 +24,7 @@ jobs:
 
     - name: Run ESLint
       run: |
-        if [ -f ".eslintrc.js" ] || [ -f ".eslintrc.json" ] || grep -q "eslintConfig" package.json; then
+        if [ -f ".eslintrc.js" ] || [ -f ".eslintrc.json" ] || grep -q "eslintConfig" package.json 2>/dev/null; then
           npx eslint src/ --ext .js,.jsx,.ts,.tsx --format=github || true
         else
           echo "ESLint not configured"
@@ -32,7 +32,7 @@ jobs:
 
     - name: Check Prettier formatting
       run: |
-        if [ -f ".prettierrc" ] || [ -f ".prettierrc.json" ] || grep -q "prettier" package.json; then
+        if [ -f ".prettierrc" ] || [ -f ".prettierrc.json" ] || grep -q "prettier" package.json 2>/dev/null; then
           npx prettier --check "src/**/*.{js,jsx,ts,tsx,json,css,md}" || true
         else
           echo "Prettier not configured"
