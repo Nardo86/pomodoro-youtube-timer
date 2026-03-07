@@ -54,41 +54,28 @@ npm start
 
 ---
 
-## 🚀 Manual Deployment with Nginx
+## 🚀 Deployment
 
-1. **Build the production version:**
-   ```bash
-   npm run build
-   ```
+```bash
+npm run build
+sudo cp -r build/* /var/www/html/
+sudo chown -R www-data:www-data /var/www/html/
+sudo systemctl reload nginx
+```
 
-2. **Copy the `build` folder contents to your web server.**
+Nginx config:
+```nginx
+server {
+    listen 80;
+    server_name yourdomain.com;
+    root /var/www/html;
+    index index.html;
+    location / { try_files $uri $uri/ /index.html; }
+    location ~* \.(js|css|png|jpg|ico|svg)$ { expires 1y; add_header Cache-Control "public, immutable"; }
+}
+```
 
-3. **Configure Nginx:**
-   ```nginx
-   server {
-       listen 80;
-       server_name yourdomain.com;
-       root /path/to/your/build/folder;
-       index index.html;
-
-       location / {
-           try_files \$uri \$uri/ /index.html;
-       }
-
-       location /api {
-           proxy_pass http://localhost:3001;
-       }
-   }
-   ```
-   - Replace `yourdomain.com` with your actual domain.
-   - Update `/path/to/your/build/folder` with the real path.
-   - Configure SSL for HTTPS and set proper permissions.
-
----
-
-## 📚 Documentation
-- **[DEPLOYMENT.md](DEPLOYMENT.md)** – Complete deployment guide with GitHub Actions
-- **[DEVELOPMENT.md](DEVELOPMENT.md)** – Development setup and architecture
+Or use `./deploy.sh` for a guided deploy with backup/rollback support.
 
 ---
 

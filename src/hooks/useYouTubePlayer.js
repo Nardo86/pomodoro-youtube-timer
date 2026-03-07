@@ -1,54 +1,45 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 
-/**
- * Custom hook for managing YouTube player integration.
- * Handles API loading, player creation, cleanup, and playback control.
- */
 const useYouTubePlayer = (videoId) => {
   const playerRef = useRef(null);
   const [isReady, setIsReady] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [apiReady, setApiReady] = useState(!!(window.YT && window.YT.Player));
 
   // Load YouTube IFrame API
   useEffect(() => {
-    // Skip loading API in test environment
-    if (process.env.NODE_ENV === 'test') {
-      return;
-    }
+    if (process.env.NODE_ENV === 'test') return;
 
-    // Check if API is already loaded
     if (window.YT && window.YT.Player) {
+      setApiReady(true);
       return;
     }
 
-    const tag = document.createElement('script');
-    tag.src = 'https://www.youtube.com/iframe_api';
-    const firstScriptTag = document.getElementsByTagName('script')[0];
-    if (firstScriptTag && firstScriptTag.parentNode) {
-      firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-    } else {
-      document.head.appendChild(tag);
-    }
-
+    const previousCallback = window.onYouTubeIframeAPIReady;
     window.onYouTubeIframeAPIReady = () => {
-      // API ready
+      if (previousCallback) previousCallback();
+      setApiReady(true);
     };
+
+    if (!document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
+      const tag = document.createElement('script');
+      tag.src = 'https://www.youtube.com/iframe_api';
+      const firstScriptTag = document.getElementsByTagName('script')[0];
+      if (firstScriptTag && firstScriptTag.parentNode) {
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+      } else {
+        document.head.appendChild(tag);
+      }
+    }
   }, []);
 
-  // Create/update player when videoId changes
+  // Create/update player when videoId or apiReady changes
   useEffect(() => {
-    // Skip player creation in test environment
-    if (process.env.NODE_ENV === 'test') {
-      return;
-    }
-
-    if (!videoId || !window.YT || !window.YT.Player) {
-      return;
-    }
+    if (process.env.NODE_ENV === 'test') return;
+    if (!videoId || !apiReady) return;
 
     setIsLoading(true);
 
-    // Destroy existing player before creating a new one
     if (playerRef.current) {
       try {
         playerRef.current.destroy();
@@ -58,15 +49,14 @@ const useYouTubePlayer = (videoId) => {
       playerRef.current = null;
     }
 
-    // Create new player
     playerRef.current = new window.YT.Player('youtube-player', {
       videoId: videoId,
       events: {
         onReady: (event) => {
           setIsReady(true);
           setIsLoading(false);
-          // Initial state is paused
           event.target.pauseVideo();
+          window.dispatchEvent(new Event('youtube-player-ready'));
         },
         onError: () => {
           setIsReady(false);
@@ -76,7 +66,6 @@ const useYouTubePlayer = (videoId) => {
     });
 
     return () => {
-      // Cleanup player on unmount or when videoId changes
       if (playerRef.current) {
         try {
           playerRef.current.destroy();
@@ -86,7 +75,7 @@ const useYouTubePlayer = (videoId) => {
         playerRef.current = null;
       }
     };
-  }, [videoId]);
+  }, [videoId, apiReady]);
 
   const playVideo = useCallback(() => {
     if (playerRef.current && playerRef.current.playVideo) {
@@ -100,13 +89,7 @@ const useYouTubePlayer = (videoId) => {
     }
   }, []);
 
-  return {
-    playerRef,
-    isReady,
-    isLoading,
-    playVideo,
-    pauseVideo
-  };
+  return { playerRef, isReady, isLoading, playVideo, pauseVideo };
 };
 
 export default useYouTubePlayer;

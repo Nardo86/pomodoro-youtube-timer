@@ -24,6 +24,7 @@ import YouTubeIcon from '@mui/icons-material/YouTube';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
 import CloseIcon from '@mui/icons-material/Close';
 import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
@@ -255,19 +256,6 @@ const YouTubePlayer = ({ onVideoChange }) => {
     }
   };
 
-  // Handle YouTube player ready event from the hook
-  useEffect(() => {
-    const checkPlayerReady = setInterval(() => {
-      const playerElement = document.getElementById('youtube-player');
-      if (playerElement && playerElement.classList.contains('ytp-pause-overlay')) {
-        setIsPlayerLoading(false);
-        clearInterval(checkPlayerReady);
-      }
-    }, 500);
-
-    return () => clearInterval(checkPlayerReady);
-  }, [currentVideoId]);
-
   return (
     <Box sx={{ mt: 2 }}>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
@@ -339,7 +327,7 @@ const YouTubePlayer = ({ onVideoChange }) => {
                 alignSelf: { xs: 'center', sm: 'auto' }
               }}
             >
-              {isBookmarked ? <StarIcon /> : <StarIcon />}
+              {isBookmarked ? <StarIcon /> : <StarBorderIcon />}
             </IconButton>
           </Tooltip>
         )}

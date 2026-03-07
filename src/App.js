@@ -12,15 +12,19 @@ function App() {
   const [isWorkTime, setIsWorkTime] = useState(true);
   const [isTimerActive, setIsTimerActive] = useState(false);
   const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
-  const [darkMode, setDarkMode] = useState(prefersDarkMode);
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('darkMode');
+    if (saved !== null) return saved === 'true';
+    return prefersDarkMode;
+  });
 
   // Use custom hooks
   const audioRef = useBellSound();
   const { playVideo, pauseVideo } = useYouTubePlayer(videoId);
 
   useEffect(() => {
-    setDarkMode(prefersDarkMode);
-  }, [prefersDarkMode]);
+    localStorage.setItem('darkMode', String(darkMode));
+  }, [darkMode]);
 
   const theme = createTheme({
     palette: {
