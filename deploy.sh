@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # 🚀 Pomodoro YouTube Timer - Nginx Deployment Script
 # This script deploys the built application to nginx
@@ -19,24 +19,24 @@ NC='\033[0m' # No Color
 
 # Helper functions
 log_info() {
-    echo -e "${BLUE}ℹ️  $1${NC}"
+    printf '%s\n' "${BLUE}ℹ️  ${1}${NC}"
 }
 
 log_success() {
-    echo -e "${GREEN}✅ $1${NC}"
+    printf '%s\n' "${GREEN}✅ ${1}${NC}"
 }
 
 log_warning() {
-    echo -e "${YELLOW}⚠️  $1${NC}"
+    printf '%s\n' "${YELLOW}⚠️  ${1}${NC}"
 }
 
 log_error() {
-    echo -e "${RED}❌ $1${NC}"
+    printf '%s\n' "${RED}❌ ${1}${NC}"
 }
 
 # Check if running as root
 check_root() {
-    if [ "$EUID" -ne 0 ]; then
+    if [ "$(id -u)" -ne 0 ]; then
         log_error "This script must be run as root (use sudo)"
         exit 1
     fi
@@ -44,11 +44,11 @@ check_root() {
 
 # Check if nginx is installed
 check_nginx() {
-    if ! command -v nginx &> /dev/null; then
+    if ! command -v nginx > /dev/null 2>&1; then
         log_error "nginx is not installed. Please install nginx first."
         exit 1
     fi
-    
+
     if ! systemctl is-active --quiet nginx; then
         log_warning "nginx is not running. Starting nginx..."
         systemctl start nginx
@@ -57,14 +57,17 @@ check_nginx() {
 
 # Backup current deployment
 backup_current() {
-    if [ -d "$NGINX_ROOT" ] && [ "$(ls -A $NGINX_ROOT 2>/dev/null)" ]; then
-        log_info "Creating backup of current deployment..."
-        mkdir -p "$BACKUP_DIR"
-        BACKUP_NAME="backup-$(date +%Y%m%d_%H%M%S)"
-        cp -r "$NGINX_ROOT" "$BACKUP_DIR/$BACKUP_NAME"
-        log_success "Backup created: $BACKUP_DIR/$BACKUP_NAME"
-    else
-        log_info "No existing deployment to backup"
+    if [ -d "$NGINX_ROOT" ]; then
+        DIR_CONTENTS=$(ls -A "$NGINX_ROOT" 2>/dev/null)
+        if [ -n "$DIR_CONTENTS" ]; then
+            log_info "Creating backup of current deployment..."
+            mkdir -p "$BACKUP_DIR"
+            BACKUP_NAME="backup-$(date +%Y%m%d_%H%M%S)"
+            cp -r "$NGINX_ROOT" "$BACKUP_DIR/$BACKUP_NAME"
+            log_success "Backup created: $BACKUP_DIR/$BACKUP_NAME"
+        else
+            log_info "No existing deployment to backup"
+        fi
     fi
 }
 

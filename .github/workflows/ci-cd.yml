@@ -60,7 +60,8 @@ jobs:
 
     - name: Check for vulnerabilities
       run: |
-        if [ $(npm audit --json | jq -r '.metadata.vulnerabilities.total') -gt 0 ]; then
+        VULN_COUNT=$(npm audit --json | jq -r '.metadata.vulnerabilities.total')
+        if [ "$VULN_COUNT" -gt 0 ]; then
           echo "❌ Security vulnerabilities found!"
           npm audit
           exit 1
@@ -93,7 +94,9 @@ jobs:
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "File sizes after gzip:" >> $GITHUB_STEP_SUMMARY
         find build/static -name "*.js" -o -name "*.css" | xargs ls -lh | awk '{print $5, $9}' | while read size file; do
-          echo "- \`$file\`: $size" >> $GITHUB_STEP_SUMMARY
+          if [ -n "$file" ]; then
+            echo "- \`$file\`: $size" >> $GITHUB_STEP_SUMMARY
+          fi
         done
 
     - name: Create nginx deployment package
@@ -144,13 +147,13 @@ jobs:
 
         # Create deployment script
         cat > nginx-package/deploy.sh << 'EOFDEPLOY'
-        #!/bin/bash
+        #!/bin/sh
         set -e
 
         echo "🚀 Deploying Pomodoro Timer to Nginx..."
 
         # Check if running as root
-        if [ "\$EUID" -ne 0 ]; then
+        if [ "$(id -u)" -ne 0 ]; then
             echo "Please run as root (use sudo)"
             exit 1
         fi
@@ -158,7 +161,8 @@ jobs:
         # Backup current deployment
         if [ -d "/var/www/html" ]; then
             echo "📦 Creating backup..."
-            cp -r /var/www/html /var/www/html.backup.\$(date +%Y%m%d_%H%M%S)
+            BACKUP_TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+            cp -r /var/www/html /var/www/html.backup.$BACKUP_TIMESTAMP
         fi
 
         # Copy new files
